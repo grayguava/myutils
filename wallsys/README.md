@@ -138,24 +138,16 @@ Delete `bin/state.json` to reset the cycle. The tool recreates it with a fresh s
 
 ---
 
-## HtK integration
+## Mapping hotkeys
 
-`wallswitch.htk` is a [HotKeyKiller](https://www.ampsoft.net/utilities/HotKeyKiller/) (also known as HotKeyP) configuration file that launches `randomwall.exe` on a hotkey press.
+`wallswitch.exe` is designed to be bound to a key combination for instant wallpaper switching. Since it has no UI and produces no output, it works with any hotkey tool:
 
-```
-hotKeys7 1 1
-wallswitch
-D:\Tools\myutils\wallswitch\bin\wallswitch.exe
+- **AutoHotkey** — `` #^!w::Run "wallswitch\bin\wallswitch.exe" ``
+- **HotKeyKiller / HotKeyP** — create a new entry pointing to the `.exe`, pick your key combination.
+- **PowerToys** — Keyboard Manager → remap a shortcut to launch the `.exe`.
+- **Task Scheduler** — trigger at logon for an automatic wallpaper on startup.
 
-3735553 32 4 0 3 0 -1 0 0
-```
-
-- **Line 1:** Protocol version (`hotKeys7`) and enabled flag (`1 1`).
-- **Line 2:** Display name in the HotKeyKiller window.
-- **Line 3:** Full path to the executable.
-- **Line 7:** Numeric hotkey binding — `3735553` decodes to Alt+Ctrl+Win+Shift+W, `32` = `ACTION_RUN`.
-
-To rebind, edit the numeric line in a HotKeyKiller-compatible editor or regenerate via the HotKeyKiller GUI.
+The hotkey itself is up to you — `wallswitch.exe` just picks the next image from the shuffle queue and exits.
 
 ---
 

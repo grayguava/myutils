@@ -8,7 +8,7 @@ Personal collection of utility tools I've built for daily use on Windows. Covers
 |---|---|---|---|
 | `wallsys/` | C# | Yes — standalone `.exe` | On-demand wallpaper randomizer with a shuffle queue (no repeats until all images are shown). Compiled with `csc.exe` — no runtime install needed. |
 | `kdbx-backup/` | C# | Yes — two standalone `.exe` files | Backup pipeline for KeePass `.kdbx` files. An always-on watcher daemon snapshots databases on file change; a scheduler-triggered tool pushes snapshots to cloud remotes via rclone. |
-| `archive/wallsys_old/` | C# | Yes — standalone `.exe` files | Predecessor to `wallsys/`. Two separate binaries for SFW and NSFW wallpaper pools. Simpler random-only picker (no shuffle queue). |
+| `archive/wallsys_old/` | C# | Yes — standalone `.exe` files | Predecessor to `wallsys/`. Two separate binaries for nature/tech wallpaper pools. Simpler random-only picker (no shuffle queue). |
 | `delpyc/` | Python | No — pip install required | Recursively deletes `__pycache__` directories under a given path. CLI via `click`. Install with `pip install delpyc/`. |
 | `dirdiff/` | Python | Optional — pip or `python -m dirdiff` | Compares two directories by filename, size, and SHA256. Opens native Windows folder pickers. Stdlib-only — install optional. |
 | `exiftool/` | Python | No — run directly (`python src/clean.py`) | Strips EXIF/IPTC/XMP/metadata from images, videos, and PDFs. Safe copy-then-swap workflow with full rollback on failure. Requires `exiftool` CLI on PATH. |

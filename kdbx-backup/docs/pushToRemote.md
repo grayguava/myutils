@@ -16,7 +16,7 @@ File: `pushToRemote\bin\config.ini`
 | Key | Required | Default | Description |
 |---|---|---|---|
 | `SourceDir` | no | `..\databaseCopies` | Local folder to push. Relative paths resolve against the `.exe`'s own folder. |
-| `RclonePath` | no | `rclone` | Path to `rclone.exe`. `rclone` works if it's on `PATH`; use a full path otherwise. |
+| `RclonePath` | no | `rclone` | *(deprecated — ignored, hardcoded to `rclone`)* |
 | `Remotes` | no | — | Comma-separated rclone remote names. Must match names in `rclone config` exactly (case-sensitive). |
 | `RemotePath` | no | `kdbx-backup` | Folder name to create inside each remote. |
 | `LogFile` | no | `..\logs\rclone.log` | Append-only log. Shared with the watcher's log folder at `kdbx-backup\logs\`. |
@@ -190,5 +190,4 @@ just remove it from the `Remotes=` line.
   all three remotes fail and log errors. Not a problem in practice — the
   next scheduled run will succeed when connectivity is restored, and
   rclone copy is idempotent.
-- **rclone must be on PATH** (or `RclonePath` must be set to the full
-  path). If rclone is updated and the path changes, update `config.ini`.
+- **rclone must be on PATH** — the executable path is hardcoded to `rclone`. If rclone is installed elsewhere, add its directory to PATH or use a symlink.

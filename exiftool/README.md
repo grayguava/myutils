@@ -217,7 +217,7 @@ By copying to a temp workspace first, originals are never touched until the wipe
 
 ### Why no command-line arguments
 
-The tool is designed for occasional interactive use — "I have a batch of files I want to clean" — not for automation. A native GUI file picker is more ergonomic than typing paths. The same dialog pattern (PowerShell + `System.Windows.Forms.OpenFileDialog`) is shared with `dirdiff.py` for consistency.
+The tool is designed for occasional interactive use — "I have a batch of files I want to clean" — not for automation. A native GUI file picker is more ergonomic than typing paths. The same dialog pattern (PowerShell + `System.Windows.Forms.OpenFileDialog`) is shared with `dirdiff` for consistency.
 
 ### Why `-all=` deletes everything
 
