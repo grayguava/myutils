@@ -1,7 +1,7 @@
 # kdbx-backup — KeePass `.kdbx` backup pipeline
 
 - **Tools:** `kdbxWatch.exe` (always-on daemon) + `kdbxPushToRemote.exe` (scheduled runner)
-- **Source:** `backgroundWatcher/src/watcher.cs`, `pushToRemote/src/push.cs`
+- **Source:** `src/watcher.cs`, `src/push.cs`
 - **Language:** C#, compiled via `csc.exe /target:winexe`
 - **Dependencies:** rclone (for cloud push)
 - **Role:** Two-tool pipeline that snapshots KeePass databases on file change and pushes them to three cloud providers.
@@ -55,14 +55,13 @@ Both use `/target:winexe` — no console window at any point. The process appear
 ```
 kdbx-backup/
 ├── build.bat                    ← builds both tools
-├── backgroundWatcher/
-│   ├── src/watcher.cs          ← source (edit this)
-│   ├── bin/kdbxWatch.exe       ← compiled binary
-│   └── bin/config.ini          ← config
-├── pushToRemote/
-│   ├── src/push.cs             ← source (edit this)
-│   ├── bin/kdbxPushToRemote.exe
-│   └── bin/config.ini
+├── src/
+│   ├── watcher.cs              ← source (edit this)
+│   └── push.cs                 ← source (edit this)
+├── bin/
+│   ├── kdbxWatch.exe           ← compiled binary
+│   ├── kdbxPushToRemote.exe    ← compiled binary
+│   └── config.ini              ← central config (shared by both)
 ├── databaseCopies/              ← local snapshot destination (auto-created)
 ├── logs/                        ← shared log folder (auto-created)
 └── README.md
@@ -75,8 +74,8 @@ kdbx-backup/
 ### kdbxWatch (always-on daemon)
 
 - **Trigger:** At log on
-- **Action:** Start `backgroundWatcher\bin\kdbxWatch.exe`
-- **Start in:** `<kdbx-backup>\backgroundWatcher\bin\`
+- **Action:** Start `bin\kdbxWatch.exe`
+- **Start in:** `<kdbx-backup>\bin\`
 - **Settings:** If task is already running → Do not start a new instance
 
 The single-instance constraint in Task Scheduler is a second layer of defence — the `.exe` also holds a named mutex (`Global\kdbxWatchSingleInstance`) that causes any duplicate launch to exit immediately.
@@ -84,8 +83,8 @@ The single-instance constraint in Task Scheduler is a second layer of defence �
 ### kdbxPushToRemote (scheduled, run-to-completion)
 
 - **Trigger:** On a schedule (e.g. hourly, or at logon + repeat)
-- **Action:** Start `pushToRemote\bin\kdbxPushToRemote.exe`
-- **Start in:** `<kdbx-backup>\pushToRemote\bin\`
+- **Action:** Start `bin\kdbxPushToRemote.exe`
+- **Start in:** `<kdbx-backup>\bin\`
 - **Settings:** If task is already running → Do not start a new instance
 
 Unlike the watcher, this tool exits on its own when done. The "do not start a new instance" setting prevents a slow upload run from stacking with the next scheduled trigger.

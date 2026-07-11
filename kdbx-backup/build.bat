@@ -1,7 +1,4 @@
 @echo off
-REM Compile both kdbx-backup tools using the built-in .NET Framework C# compiler.
-REM No project file, no dotnet CLI, no NuGet.
-
 set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 
 if not exist "%CSC%" (
@@ -10,12 +7,14 @@ if not exist "%CSC%" (
     exit /b 1
 )
 
+if not exist bin\ md bin
+
 echo Building kdbxWatch...
-"%CSC%" /nologo /target:winexe /out:backgroundWatcher\bin\kdbxWatch.exe backgroundWatcher\src\watcher.cs
+"%CSC%" /nologo /target:winexe /out:bin\kdbxWatch.exe src\watcher.cs
 if %ERRORLEVEL% NEQ 0 exit /b 1
 
 echo Building kdbxPushToRemote...
-"%CSC%" /nologo /target:winexe /out:pushToRemote\bin\kdbxPushToRemote.exe pushToRemote\src\push.cs
+"%CSC%" /nologo /target:winexe /out:bin\kdbxPushToRemote.exe src\push.cs
 if %ERRORLEVEL% NEQ 0 exit /b 1
 
 echo All builds succeeded.

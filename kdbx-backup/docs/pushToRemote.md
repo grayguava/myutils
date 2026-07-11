@@ -1,7 +1,7 @@
 # kdbxPushToRemote — deep-dive documentation
 
-**Tool:** `pushToRemote\bin\kdbxPushToRemote.exe`
-**Source:** `pushToRemote\src\push.cs`
+**Tool:** `bin\kdbxPushToRemote.exe`
+**Source:** `src\push.cs`
 **Language:** C#, compiled via `csc.exe /target:winexe`
 **Role:** Run-to-completion. Pushes `databaseCopies\` to all configured
 rclone remotes sequentially. Started by Task Scheduler on a schedule,
@@ -11,15 +11,15 @@ exits when done.
 
 ## Configuration reference
 
-File: `pushToRemote\bin\config.ini`
+File: `bin\config.ini`
 
 | Key | Required | Default | Description |
 |---|---|---|---|
-| `SourceDir` | no | `..\databaseCopies` | Local folder to push. Relative paths resolve against the `.exe`'s own folder. |
+| `PushSourceDir` | no | `..\databaseCopies` | Local folder to push. Relative paths resolve against the `.exe`'s own folder. |
 | `RclonePath` | no | `rclone` | *(deprecated — ignored, hardcoded to `rclone`)* |
 | `Remotes` | no | — | Comma-separated rclone remote names. Must match names in `rclone config` exactly (case-sensitive). |
 | `RemotePath` | no | `kdbx-backup` | Folder name to create inside each remote. |
-| `LogFile` | no | `..\logs\rclone.log` | Append-only log. Shared with the watcher's log folder at `kdbx-backup\logs\`. |
+| `PushLogFile` | no | `..\logs\rclone.log` | Append-only log. Shared with the watcher's log folder at `kdbx-backup\logs\`. |
 
 ---
 
@@ -117,12 +117,12 @@ the "If task is already running → Do not start a new instance" setting.
 ## Task Scheduler setup
 
 - **Trigger:** Schedule (e.g. hourly, or daily)
-- **Action:** Start `pushToRemote\kdbxPushToRemote.exe`
-- **Start in:** `D:\Tools\kdbx-backup\pushToRemote\`
+- **Action:** Start `bin\kdbxPushToRemote.exe`
+- **Start in:** `D:\Tools\kdbx-backup\bin\`
 - **Settings → If task is already running:** Do not start a new instance
 
 The "Start in" field matters: without it, relative paths in `config.ini`
-(`SourceDir=..\databaseCopies`, `LogFile=..\logs\rclone.log`) would
+(`PushSourceDir=..\databaseCopies`, `PushLogFile=..\logs\rclone.log`) would
 resolve against Task Scheduler's own working directory rather than the
 `.exe`'s folder. Setting "Start in" ensures they resolve correctly.
 

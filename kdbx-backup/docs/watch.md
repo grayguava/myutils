@@ -1,7 +1,7 @@
 # kdbxWatch — deep-dive documentation
 
-**Tool:** `backgroundWatcher\bin\kdbxWatch.exe`
-**Source:** `backgroundWatcher\src\watcher.cs`
+**Tool:** `bin\kdbxWatch.exe`
+**Source:** `src\watcher.cs`
 **Language:** C#, compiled via `csc.exe /target:winexe`
 **Role:** Always-running daemon. Watches source directory for `.kdbx`
 changes, creates local timestamped snapshots in `databaseCopies\`.
@@ -10,15 +10,15 @@ changes, creates local timestamped snapshots in `databaseCopies\`.
 
 ## Configuration reference
 
-File: `backgroundWatcher\bin\config.ini`
+File: `bin\config.ini`
 
 | Key | Required | Default | Description |
 |---|---|---|---|
-| `SourceDir` | yes | — | Directory to watch for `.kdbx` files. Spaces and special characters (e.g. `&`) work fine — no quoting needed, no trailing backslash needed. |
+| `WatchSourceDir` | yes | — | Directory to watch for `.kdbx` files. Spaces and special characters (e.g. `&`) work fine — no quoting needed, no trailing backslash needed. |
 | `DestDir` | no | `snapshots` | Snapshot destination. Relative paths resolve against the `.exe`'s own folder. In production: `D:\Tools\kdbx-backup\databaseCopies` (absolute) or `..\..\databaseCopies` (relative). |
 | `HashAlgo` | no | `SHA256` | Hash algorithm. One of `SHA256`, `SHA1`, `MD5`. Controls both change detection and the manifest filename (`SHA256SUMS.txt`, etc.). |
 | `DebounceSeconds` | no | `5` | Seconds to wait after the last filesystem event on a file before processing. Absorbs multi-event saves. |
-| `LogFile` | no | `logs\watch.log` | Append-only log. In production: `..\logs\watch.log` (shared log folder at project root). |
+| `WatchLogFile` | no | `logs\watch.log` | Append-only log. In production: `..\logs\watch.log` (shared log folder at project root). |
 | `MaxSnapshots` | no | `15` | Maximum snapshot folders to keep in `DestDir`. Oldest deleted first after each new snapshot. `0` = unlimited. |
 
 ---

@@ -81,7 +81,7 @@ namespace kdbxPushToRemote
                 values[key] = val;
             }
 
-            string sourceRaw = values.ContainsKey("SourceDir") ? values["SourceDir"] : "..\\databaseCopies";
+            string sourceRaw = values.ContainsKey("PushSourceDir") ? values["PushSourceDir"] : "..\\databaseCopies";
             SourceDir = Path.IsPathRooted(sourceRaw)
                 ? sourceRaw
                 : Path.GetFullPath(Path.Combine(baseDir, sourceRaw));
@@ -98,7 +98,7 @@ namespace kdbxPushToRemote
                 }
             }
 
-            string logRaw = values.ContainsKey("LogFile") ? values["LogFile"] : "..\\logs\\rclone.log";
+            string logRaw = values.ContainsKey("PushLogFile") ? values["PushLogFile"] : "..\\logs\\push.log";
             LogFile = Path.IsPathRooted(logRaw)
                 ? logRaw
                 : Path.GetFullPath(Path.Combine(baseDir, logRaw));
@@ -112,15 +112,12 @@ namespace kdbxPushToRemote
             var psi = new ProcessStartInfo
             {
                 FileName               = RclonePath,
+                Arguments              = "copy \"" + SourceDir + "\" \"" + destination + "\" --stats-one-line",
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true,
                 CreateNoWindow         = true,
             };
-            psi.ArgumentList.Add("copy");
-            psi.ArgumentList.Add(SourceDir);
-            psi.ArgumentList.Add(destination);
-            psi.ArgumentList.Add("--stats-one-line");
 
             var outputBuffer = new StringBuilder();
             var errorBuffer  = new StringBuilder();

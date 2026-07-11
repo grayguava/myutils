@@ -101,7 +101,7 @@ namespace kdbxWatch
                 values[key] = val;
             }
 
-            SourceDir = RequireValue(values, "SourceDir");
+            SourceDir = RequireValue(values, "WatchSourceDir");
             HashAlgo = values.ContainsKey("HashAlgo") ? values["HashAlgo"] : "SHA256";
             DebounceMs = (values.ContainsKey("DebounceSeconds")
                 ? int.Parse(values["DebounceSeconds"])
@@ -110,7 +110,7 @@ namespace kdbxWatch
             string destRaw = values.ContainsKey("DestDir") ? values["DestDir"] : "snapshots";
             DestDir = Path.IsPathRooted(destRaw) ? destRaw : Path.Combine(baseDir, destRaw);
 
-            string logRaw = values.ContainsKey("LogFile") ? values["LogFile"] : "logs\\watch.log";
+            string logRaw = values.ContainsKey("WatchLogFile") ? values["WatchLogFile"] : "logs\\watch.log";
             LogFile = Path.IsPathRooted(logRaw) ? logRaw : Path.Combine(baseDir, logRaw);
         }
 
