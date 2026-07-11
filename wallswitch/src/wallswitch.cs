@@ -10,94 +10,84 @@ class Program {
     static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 
     static string exeDir;
-    static string assetsDir;
     static string stateFile;
 
     [STAThread]
     static void Main() {
-        exeDir    = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        assetsDir = Path.Combine(exeDir, "assets");
-        stateFile = Path.Combine(exeDir, "state.json");
+        exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        stateFile = Path.Combine(exeDir, "state");
 
-        if (!Directory.Exists(assetsDir)) return;
-
-        // Scan assets
-        string[] exts = { "*.jpg", "*.jpeg", "*.png", "*.bmp" };
-        var allImages = new List<string>();
-        foreach (var ext in exts)
-            allImages.AddRange(Directory.GetFiles(assetsDir, ext, SearchOption.TopDirectoryOnly));
-
-        if (allImages.Count == 0) return;
-
-        // Normalize to relative paths for portability
-        for (int i = 0; i < allImages.Count; i++)
-            allImages[i] = MakeRelative(allImages[i]);
-
-        // Load state
         var state = LoadState();
 
-        // Sync: detect added/removed images
-        var known = new HashSet<string>(state.Queue);
-        known.UnionWith(state.Shown);
-        var current = new HashSet<string>(allImages);
-
-        bool dirty = !known.SetEquals(current);
-
-        if (dirty) {
-            // Files changed — rebuild queue
-            // Keep unshown items that still exist, in their current order
-            var keepUnshown = new List<string>();
-            foreach (var f in state.Queue)
-                if (current.Contains(f)) keepUnshown.Add(f);
-
-            // New files go into a shuffled pool appended after keepUnshown
-            var brandNew = new List<string>();
-            foreach (var f in allImages)
-                if (!known.Contains(f)) brandNew.Add(f);
-            Shuffle(brandNew);
-
-            state.Queue = new List<string>(keepUnshown);
-            state.Queue.AddRange(brandNew);
-            state.Shown = new List<string>();
-
-            // If keepUnshown + brandNew is empty somehow, full reshuffle
-            if (state.Queue.Count == 0) {
-                state.Queue = new List<string>(allImages);
-                Shuffle(state.Queue);
+        while (state.Queue.Count > 0) {
+            string chosen = state.Queue[0];
+            string fullPath = Path.Combine(exeDir, chosen);
+            if (File.Exists(fullPath)) {
+                state.Queue.RemoveAt(0);
+                state.Shown.Add(chosen);
+                SaveState(state);
+                ApplyWallpaper(fullPath);
+                return;
             }
+            state.Queue.RemoveAt(0);
         }
 
-        // If queue exhausted, reshuffle everything
-        if (state.Queue.Count == 0) {
-            state.Queue = new List<string>(allImages);
-            Shuffle(state.Queue);
+        // Queue exhausted: full scan + rebuild
+        {
+            string assetsDir = ResolveAssetsDir();
+            if (!Directory.Exists(assetsDir)) return;
+
+            string[] exts = { "*.jpg", "*.jpeg", "*.png", "*.bmp" };
+            var allImages = new List<string>();
+            foreach (var ext in exts)
+                allImages.AddRange(Directory.GetFiles(assetsDir, ext, SearchOption.TopDirectoryOnly));
+            if (allImages.Count == 0) return;
+
+            for (int i = 0; i < allImages.Count; i++)
+                allImages[i] = MakeRelative(allImages[i]);
+
+            Shuffle(allImages);
+            state.Queue = allImages;
             state.Shown = new List<string>();
+
+            string c = state.Queue[0];
+            state.Queue.RemoveAt(0);
+            state.Shown.Add(c);
+            SaveState(state);
+
+            string fp = Path.Combine(exeDir, c);
+            if (!File.Exists(fp)) return;
+            ApplyWallpaper(fp);
         }
+    }
 
-        // Pop first
-        string chosen = state.Queue[0];
-        state.Queue.RemoveAt(0);
-        state.Shown.Add(chosen);
-
-        // Save state
-        SaveState(state);
-
-        // Resolve full path
-        string fullPath = Path.Combine(exeDir, chosen);
-        if (!File.Exists(fullPath)) return;
-
-        // Write registry for persistence across reboots
+    static void ApplyWallpaper(string fullPath) {
         using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true)) {
             key.SetValue("Wallpaper", fullPath);
             key.SetValue("WallpaperStyle", "10");
             key.SetValue("TileWallpaper", "0");
         }
-
-        // Apply live
         SystemParametersInfo(20, 0, fullPath, 3);
     }
 
-    // --- Shuffle (Fisher-Yates, Guid-seeded) ---
+    static string ResolveAssetsDir() {
+        string path = Path.Combine(exeDir, "config.ini");
+        if (!File.Exists(path)) return Path.Combine(exeDir, "assets");
+        try {
+            foreach (string raw in File.ReadAllLines(path)) {
+                string line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                int eq = line.IndexOf('=');
+                if (eq <= 0) continue;
+                string key = line.Substring(0, eq).Trim();
+                string val = line.Substring(eq + 1).Trim();
+                if (string.Equals(key, "AssetsDir", StringComparison.OrdinalIgnoreCase))
+                    return Path.IsPathRooted(val) ? val : Path.Combine(exeDir, val);
+            }
+        } catch { }
+        return Path.Combine(exeDir, "assets");
+    }
+
     static void Shuffle(List<string> list) {
         var rng = new Random(Guid.NewGuid().GetHashCode());
         for (int i = list.Count - 1; i > 0; i--) {
@@ -106,14 +96,12 @@ class Program {
         }
     }
 
-    // --- Relative path helpers ---
     static string MakeRelative(string full) {
         return full.StartsWith(exeDir, StringComparison.OrdinalIgnoreCase)
             ? full.Substring(exeDir.Length).TrimStart('\\', '/')
             : full;
     }
 
-    // --- Minimal JSON state (no external deps) ---
     class State {
         public List<string> Queue = new List<string>();
         public List<string> Shown = new List<string>();
@@ -123,51 +111,26 @@ class Program {
         var s = new State();
         if (!File.Exists(stateFile)) return s;
         try {
-            string json = File.ReadAllText(stateFile, Encoding.UTF8);
-            s.Queue = ParseJsonArray(json, "queue");
-            s.Shown = ParseJsonArray(json, "shown");
+            string section = "";
+            foreach (string raw in File.ReadAllLines(stateFile, Encoding.UTF8)) {
+                string line = raw.Trim();
+                if (line.Length == 0) continue;
+                if (line == "queue:") { section = "queue"; continue; }
+                if (line == "shown:") { section = "shown"; continue; }
+                if (section == "queue") s.Queue.Add(line);
+                else if (section == "shown") s.Shown.Add(line);
+            }
         } catch { }
         return s;
     }
 
     static void SaveState(State s) {
         var sb = new StringBuilder();
-        sb.AppendLine("{");
-        sb.AppendLine("  \"queue\": [");
-        for (int i = 0; i < s.Queue.Count; i++) {
-            string comma = i < s.Queue.Count - 1 ? "," : "";
-            sb.AppendLine("    \"" + Escape(s.Queue[i]) + "\"" + comma);
-        }
-        sb.AppendLine("  ],");
-        sb.AppendLine("  \"shown\": [");
-        for (int i = 0; i < s.Shown.Count; i++) {
-            string comma = i < s.Shown.Count - 1 ? "," : "";
-            sb.AppendLine("    \"" + Escape(s.Shown[i]) + "\"" + comma);
-        }
-        sb.AppendLine("  ]");
-        sb.Append("}");
+        sb.AppendLine("queue:");
+        foreach (var f in s.Queue) sb.AppendLine(f);
+        sb.AppendLine();
+        sb.AppendLine("shown:");
+        foreach (var f in s.Shown) sb.AppendLine(f);
         File.WriteAllText(stateFile, sb.ToString(), Encoding.UTF8);
-    }
-
-    static string Escape(string s) {
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
-    static List<string> ParseJsonArray(string json, string key) {
-        var result = new List<string>();
-        string marker = "\"" + key + "\"";
-        int idx = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (idx < 0) return result;
-        int start = json.IndexOf('[', idx);
-        int end   = json.IndexOf(']', start);
-        if (start < 0 || end < 0) return result;
-        string inner = json.Substring(start + 1, end - start - 1);
-        foreach (var part in inner.Split(',')) {
-            string val = part.Trim().Trim('"');
-            val = val.Replace("\\\\", "\\").Replace("\\\"", "\"");
-            if (!string.IsNullOrWhiteSpace(val))
-                result.Add(val);
-        }
-        return result;
     }
 }

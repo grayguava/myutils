@@ -10,7 +10,7 @@ if not exist "%CSC%" (
     exit /b 1
 )
 
-"%CSC%" /nologo /target:exe /out:bin\wallswitch.exe src\wallswitch.cs
+"%CSC%" /nologo /optimize+ /target:exe /out:bin\wallswitch.exe src\wallswitch.cs
 
 if %ERRORLEVEL% EQU 0 (
     echo Build succeeded: bin\wallswitch.exe

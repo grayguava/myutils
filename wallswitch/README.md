@@ -3,7 +3,7 @@
 - **Tool:** `wallswitch/bin/wallswitch.exe`
 - **Source:** `wallswitch/src/wallswitch.cs`
 - **Language:** C#, compiled via `csc.exe /target:exe`
-- **Role:** On-demand wallpaper randomizer. Picks a random image from `assets/`, applies it as the desktop wallpaper via `SystemParametersInfo`, and persists the selection across reboots via the registry. Tracks a shuffle queue in `state.json` so images are cycled without repeats until the queue is exhausted.
+- **Role:** On-demand wallpaper randomizer. Picks a random image from `assets/`, applies it as the desktop wallpaper via `SystemParametersInfo`, and persists the selection across reboots via the registry. Tracks a shuffle queue in `state` so images are cycled without repeats until the queue is exhausted.
 
 ---
 
@@ -13,12 +13,12 @@ Run `bin/wallswitch.exe` directly — double-click in Explorer, invoke from a co
 
 The tool:
 1. Scans `assets/` for images.
-2. Loads `bin/state.json` for the current shuffle queue.
+2. Loads `bin/state` for the current shuffle queue.
 3. Syncs state with current file listing (detects added/removed images).
 4. Pops the front of the queue, sets it as wallpaper, appends it to the shown list.
-5. Saves state back to `bin/state.json`.
+5. Saves state back to `bin/state`.
 
-There is no UI, no output, and no configuration file. The tool is silent on success — failure is also silent (returns without action if `assets/` is missing or empty).
+There is no UI and no output. The tool is silent on success — failure is also silent (returns without action if `assets/` is missing or empty). Configuration is via `bin/config.ini` (`AssetsDir` key, default `assets`).
 
 ---
 
@@ -46,7 +46,9 @@ wallswitch/
 ├── src/
 │   └── wallswitch.cs     ← source (edit this)
 ├── bin/
-│   └── wallswitch.exe    ← compiled binary (build output)
+│   ├── wallswitch.exe    ← compiled binary (build output)
+│   ├── config.ini        ← configuration (AssetsDir)
+│   └── state             ← shuffle queue / shown list (auto-managed)
 ├── build.bat
 └── assets/                ← your image collection
 ```
@@ -59,7 +61,7 @@ wallswitch/
 
 1. `Assembly.GetExecutingAssembly().Location` resolves the `.exe` directory.
 2. `assets/` directory scanned for `*.jpg`, `*.jpeg`, `*.png`, `*.bmp`.
-3. `bin/state.json` loaded containing two lists: `queue` and `shown`.
+3. `bin/state` loaded containing two lists: `queue` and `shown`.
 4. Image sync — compares current files against known set.
 5. If queue is empty, reshuffle all images.
 6. Pop first image from queue, append to shown.
@@ -68,7 +70,7 @@ wallswitch/
 
 ### Shuffle queue
 
-Maintains two JSON arrays:
+Maintains two lists in a flat section-based file:
 
 - **`queue`** — images scheduled to be shown, in order. The front of the queue is the next wallpaper. After it's shown, it moves to `shown`.
 - **`shown`** — images that have already been shown this cycle.
@@ -101,25 +103,22 @@ Both are needed because neither alone covers all scenarios:
 
 ## State file reference
 
-**Location:** `wallswitch/bin/state.json`
+**Location:** `wallswitch/bin/state`
 
-```json
-{
-  "queue": ["assets\\5.png", "assets\\7.png", "assets\\4.png"],
-  "shown": ["assets\\1.png", "assets\\3.png"]
-}
+```
+queue:
+assets\5.png
+assets\7.png
+assets\4.png
+
+shown:
+assets\1.png
+assets\3.png
 ```
 
-### Schema
+### Format
 
-| Key | Type | Description |
-|---|---|---|
-| `queue` | array of strings | Relative paths of images waiting to be shown |
-| `shown` | array of strings | Relative paths of images already shown this cycle |
-
-### Path format
-
-All paths are relative to the `.exe` directory, using backslash separators (Windows convention). The state file is hand-serialised — the tool writes JSON manually via `StringBuilder`, not through a JSON parser. Only these two arrays are persisted; all other state is derived.
+A flat section-based file with `queue:` and `shown:` headers. Each header is followed by one relative path per line (backslash separators). Sections are separated by a blank line. No escaping, no quoting — filenames are stored verbatim.
 
 ### Cycle behaviour
 
@@ -134,7 +133,7 @@ Run 5:  pop 5 → shown=[1,2,3,4,5]  queue=[]
 
 ### Manual reset
 
-Delete `bin/state.json` to reset the cycle. The tool recreates it with a fresh shuffle on the next run.
+Delete `bin/state` to reset the cycle. The tool recreates it with a fresh shuffle on the next run.
 
 ---
 
@@ -153,15 +152,21 @@ The hotkey itself is up to you — `wallswitch.exe` just picks the next image fr
 
 ## Configuration
 
-There is no configuration file. All settings are determined by the file structure or hardcoded in `wallswitch.cs`:
+Settings are read from `bin/config.ini`. Keys are case-insensitive; lines starting with `#` are comments.
+
+| Key | Required | Default | Description |
+|---|---|---|---|
+| `AssetsDir` | no | `assets` | Image directory. Relative paths resolve against the `.exe` folder. |
+
+All other settings are determined by the file structure or hardcoded in `wallswitch.cs`:
 
 | Setting | How to change | Default |
 |---|---|---|
-| Image pool | Add/remove files in `assets/` | Empty |
+| Image pool | Add/remove files in `AssetsDir` | Empty |
 | Supported formats | Edit `exts` array in source and recompile | `jpg`, `jpeg`, `png`, `bmp` |
 | Wallpaper style | Edit registry or change `WallpaperStyle` in source | Fill (10) |
 | Tiling | Edit `TileWallpaper` in source | Off (0) |
-| Queue persistence | Delete `state.json` to reset | Auto-managed |
+| Queue persistence | Delete `state` to reset | Auto-managed |
 | Shuffle seed | Hardcoded `Guid.NewGuid().GetHashCode()` | Random per reshuffle |
 
 To change wallpaper style from Fill to Fit, Center, Stretch, or Tile:
@@ -238,7 +243,7 @@ The tool is meant to be triggered by a hotkey — you press a key, the wallpaper
 |---|---|
 | Two separate binaries for nature/tech | Single binary, single `assets/` folder |
 | No shuffle — pure random | Shuffle queue — no repeats until cycle exhausted |
-| No state file — no cycle tracking | `state.json` persists across runs |
+| No state file — no cycle tracking | `state` persists across runs |
 | No image-add detection | New images detected and merged into queue |
 | No build script | `build.bat` for easy recompilation |
 | Source at root | Source in `src/`, binary in `bin/` |
@@ -249,9 +254,9 @@ The old nature/tech split was replaced by a single tool because the distinction 
 
 ## Known limitations
 
-- **No logging** — the tool produces no output on success or failure. Diagnosing issues requires attaching a debugger or checking `state.json` manually.
+- **No logging** — the tool produces no output on success or failure. Diagnosing issues requires attaching a debugger or checking `state` manually.
 - **Single-monitor only** — `SystemParametersInfo` sets the wallpaper for the entire virtual desktop. On multi-monitor setups, the image spans all monitors with the chosen style. For per-monitor wallpapers, use `IMultiMonitorDocking` API or a different tool.
 - **No image format conversion** — Windows must natively support the file format. `jpg`, `jpeg`, `png`, and `bmp` all work. `webp` requires the [WebP Codec for Windows](https://www.microsoft.com/store/productId/9PG2DK2V6M7P).
 - **No exclusion paths** — all images in `assets/` are included. There is no way to exclude individual files without removing them from the folder.
 - **No scheduling** — the tool is event-driven (hotkey), not time-driven. For automatic periodic rotation, use Task Scheduler or a separate daemon.
-- **State file can get stale** — if `assets/` is modified on a system without `.exe` write access (e.g. read-only mount), `state.json` cannot be updated and the cycle may repeat or skip.
+- **State file can get stale** — if `assets/` is modified on a system without `.exe` write access (e.g. read-only mount), `state` cannot be updated and the cycle may repeat or skip.
