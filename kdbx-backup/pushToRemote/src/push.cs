@@ -86,7 +86,7 @@ namespace kdbxPushToRemote
                 ? sourceRaw
                 : Path.GetFullPath(Path.Combine(baseDir, sourceRaw));
 
-            RclonePath = values.ContainsKey("RclonePath") ? values["RclonePath"] : "rclone";
+            RclonePath = "rclone";
             RemotePath = values.ContainsKey("RemotePath") ? values["RemotePath"] : "kdbx-backup";
 
             if (values.ContainsKey("Remotes"))
