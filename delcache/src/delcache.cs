@@ -5,15 +5,7 @@ using System.Reflection;
 
 class Program {
     static void Main(string[] args) {
-        string root = ".";
-        bool autoYes = false;
-
-        foreach (string arg in args) {
-            if (arg == "-y" || arg == "--yes")
-                autoYes = true;
-            else if (!arg.StartsWith("-"))
-                root = arg;
-        }
+        string root = args.Length > 0 ? args[0] : ".";
 
         string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         string configPath = Path.Combine(exeDir, "cacheDirs.ini");
@@ -50,13 +42,11 @@ class Program {
             Console.WriteLine("  " + dir);
         Console.WriteLine();
 
-        if (!autoYes) {
-            Console.Write("Delete these directories? [y/N] ");
-            string input = Console.ReadLine();
-            if (string.IsNullOrEmpty(input) || (input.Trim().ToLower() != "y" && input.Trim().ToLower() != "yes")) {
-                Console.WriteLine("Cancelled.");
-                return;
-            }
+        Console.Write("Delete these directories? [y/N] ");
+        string input = Console.ReadLine();
+        if (string.IsNullOrEmpty(input) || (input.Trim().ToLower() != "y" && input.Trim().ToLower() != "yes")) {
+            Console.WriteLine("Cancelled.");
+            return;
         }
 
         int deleted = 0;

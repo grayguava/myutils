@@ -10,18 +10,16 @@
 ## Usage
 
 ```
-delcache [path] [-y]
+delcache [path]
 ```
 
 - **`path`** — root directory to search (default: current directory)
-- **`-y`** — skip confirmation prompt, delete immediately
 
 ### Examples
 
 ```
-delcache                          search cwd, prompt
-delcache D:\Projects              search specific path, prompt
-delcache D:\Projects -y           search and delete without prompt
+delcache                     search cwd, prompt before deleting
+delcache D:\Projects         search specific path, prompt before deleting
 ```
 
 ---
@@ -39,6 +37,12 @@ node_modules
 ```
 
 If the file is missing or empty, defaults to `__pycache__` and `node_modules`.
+
+---
+
+> [!WARNING]
+>
+> `delcache` will delete every directory whose name matches an entry in `cacheDirs.ini`. A typo, a misplaced `..`, or a malicious entry (e.g. an attacker who gains write access to the config file) can cause data loss. **Always read the list of found directories carefully before typing `y`.** Only list directory names you are certain you want to recurse into and delete.
 
 ---
 
