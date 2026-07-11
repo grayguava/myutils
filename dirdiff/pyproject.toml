@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dirdiff"
+version = "1.0.0"
+description = "Verify a directory copy by comparing filenames, sizes, and SHA256 hashes"
+requires-python = ">=3.8"
+
+[project.scripts]
+dirdiff = "dirdiff:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["dirdiff*"]

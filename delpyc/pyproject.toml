@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "delpyc"
+version = "1.0.0"
+description = "Find and delete __pycache__ directories"
+requires-python = ">=3.8"
+dependencies = ["click"]
+
+[project.scripts]
+delpyc = "delpyc.core:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["delpyc*"]

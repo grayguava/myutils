@@ -1,0 +1,18 @@
+# Compiled executables
+*.exe
+
+# Wallpaper assets (personal images)
+wallsys/assets/*.png
+
+# Python cache
+__pycache__/
+*.pyc
+
+# ExifTool temp workspace
+_exiftool_tmp_*/
+
+# Application logs
+logs/
+
+# KDBX snapshot copies
+kdbx-backup/databaseCopies/
