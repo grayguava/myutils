@@ -1,95 +1,155 @@
-# dirdiff — directory copy verification
+# dirdiff — compare two directories by filename, size, and SHA256
 
-- **Tool:** `dirdiff/src/dirdiff/` (package)
-- **Language:** Python 3 (stdlib only — no pip dependencies)
-- **Role:** Point-in-time comparison of a source and destination directory. Picks two folders via native Windows dialog, then walks both trees and reports discrepancies in filename presence, file sizes, and SHA256 hashes.
+- **Tool:** `bin\dirdiff.exe`
+- **Source:** `src\dirdiff.cs`
+- **Language:** C#, compiled via `csc.exe /target:exe`
+- **Role:** Opens two native folder pickers, walks both directories, and reports discrepancies — missing files, extra files, size mismatches, and SHA256 hash differences.
 
 ---
 
 ## Usage
 
-No command-line arguments. The tool opens two native Windows folder pickers in sequence — first for the source directory, then for the destination (the copy). After selection, it scans both directories and prints a report to stdout.
-
-### Run without installing
-
-```
-python -m dirdiff
-```
-
-(Must be run from the `src/` parent directory, or with `PYTHONPATH` set accordingly.)
-
-### Install (editable, recommended for development)
-
-```
-pip install -e dirdiff/
-```
-
-Then use the `dirdiff` command anywhere:
-
 ```
 dirdiff
 ```
 
-### Install system-wide (once)
+No arguments. Two modern Explorer-style folder pickers pop up sequentially — pick source first, then destination. The report prints to the console and exits.
 
-```
-pip install dirdiff/
-```
+### What happens
 
-Then uninstall with:
-
-```
-pip uninstall dirdiff
-```
-
-### Report sections
-
-1. **Files present** — count and percentage of source files found in destination.
-2. **Missing files** — in source but not in dest (capped at 20 shown).
-3. **Extra files** — in dest but not in source (capped at 20 shown).
-4. **Size matches** — count and percentage of files with matching sizes.
-5. **Size mismatches** — files where sizes differ (capped at 20 shown).
-6. **Hash matches** — count and percentage of files with matching SHA256 hashes.
-7. **Hash mismatches** — files whose content differs (capped at 20 shown).
-8. **Hash errors** — files that could not be read on either side (capped at 10 shown).
-
-The final line is either "All N files verified OK" or a bullet summary of issues.
+1. **Pick source** — native `OpenFileDialog` (repurposed as a folder picker via `ValidateNames=false`, `CheckFileExists=false`).
+2. **Pick destination** — same dialog for the copy target.
+3. **Scan** — walk both directories recursively, building a map of relative paths to absolute paths and sizes.
+4. **Compare presence** — set difference: which files exist in only one side.
+5. **Compare sizes** — for files in both, check if byte counts match.
+6. **Compare SHA256** — hash all files present in both sides, in parallel (8 threads).
+7. **Print report** — summary statistics + detailed lists of every discrepancy found.
 
 ---
 
 ## How it works
 
-### Folder selection
-
-Uses `System.Windows.Forms.OpenFileDialog` via an inline PowerShell command — the same technique as `exiftool/src/clean.py`. The dialog is repurposed as a folder picker by disabling `ValidateNames` and `CheckFileExists`, with a placeholder filename ("Select this folder") that the user never selects. The actual folder is obtained via `Split-Path $d.FileName -Parent` on the placeholder's parent directory.
-
-The PowerShell invocation uses `powershell.exe` (Windows PowerShell 5.1), not `pwsh` (PowerShell 7.x). This is deliberate — `System.Windows.Forms` is available in Windows PowerShell without additional setup.
-
-If PowerShell or the assembly-load fails, the script raises `DialogUnavailable` and exits. There is no typed-path fallback.
-
 ### Directory scanning
 
-Both directories are walked with `os.walk` (`followlinks=False`). Each file is indexed by its relative path from the root, along with its absolute path and size in bytes. Empty directories produce no entries — they are invisible to the comparison.
+`Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)` returns every file recursively. Each file's relative path is computed by stripping the root prefix. Files that cannot be stat'd (permission errors, locked files) are silently skipped.
 
-File map keys are `pathlib.Path` objects representing the relative path (e.g. `subdir/file.txt`). The map is a plain `dict` — all entries live in memory for the duration of the script.
+### Presence comparison
 
-### Comparison phases
+Three sets computed from relative paths:
 
-Three passes over the data:
+- **In both** — intersection of source and destination keys.
+- **Missing** — source paths not found in destination.
+- **Extra** — destination paths not found in source.
 
-1. **Set arithmetic on relative paths** — produces `in_both`, `missing`, and `extra` sets. Sorted for deterministic output.
-2. **Size comparison** — iterates `in_both` in sorted order and compares `st_size`.
-3. **Hash comparison** — submits one `(rel_path, src_abs, dst_abs)` tuple per file pair to a `ThreadPoolExecutor` with 8 workers. Each task hashes both sides sequentially (1 MB chunks, SHA256). Results collected with `as_completed`; progress printed on a single line via `\r`.
+Each is sorted alphabetically for stable diffs. Lists longer than 20 entries are truncated with "... and N more".
 
-### Progress display
+### Size comparison
 
-During the hash phase, a single-line progress counter is shown:
+For every file present in both directories, `FileInfo.Length` is compared. Size mismatches are shown with both byte counts.
+
+### SHA256 hashing
+
+Files present in both are hashed using `SHA256.Create()` in 1 MB chunks via `Parallel.ForEach` (8 threads). Progress is printed inline (`N/M`). A progress counter is shown during computation. Mismatches or unreadable files are counted and reported.
+
+### Report format
 
 ```
-Computing SHA256 hashes (47/963)
+  ================================================
+  Directory Comparison Report
+  ================================================
+
+  Source:      D:\source
+  Dest:        D:\dest
+
+  ──────────────────────────────────────────────────
+
+  Scanning directories...
+
+  Files present:      957 / 959        ( 99.8%)
+
+  Missing files (2):
+
+    - file_a.txt
+    - file_b.txt
+
+  ──────────────────────────────────────────────────
+
+  Sizes matched:      957 / 957        (100.0%)
+
+  ──────────────────────────────────────────────────
+
+  Computing SHA256 hashes (957/957)
+
+  Hashes matched:     957 / 957        (100.0%)
+
+  ──────────────────────────────────────────────────
+
+  All 959 files verified OK.
 ```
 
-This overwrites itself via carriage return. The final count is left visible after completion.
+---
+
+## Building
+
+### Prerequisites
+
+- .NET Framework 4.0+ (ships with Windows 8+).
+- The C# compiler `csc.exe` at `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`.
+- `System.Windows.Forms.dll` — part of .NET Framework, available on all Windows systems with .NET installed.
+
+### Build
+
+```
+build.bat
+```
+
+Compiles `src\dirdiff.cs` → `bin\dirdiff.exe`. Links `System.Windows.Forms.dll` for the native folder picker. No Visual Studio, no `dotnet` CLI, no NuGet, no install step.
+
+### Build output
+
+```
+dirdiff/
+├── src/
+│   └── dirdiff.cs         ← source (edit this)
+├── bin/
+│   └── dirdiff.exe         ← compiled binary (build output)
+├── build.bat
+└── README.md
+```
+
+---
+
+## Design decisions
+
+### Why C# and not Python
+
+The original `dirdiff` (now archived) was a Python script that launched PowerShell to show a folder picker. That meant two runtime dependencies (Python + PowerShell) and a fragile command-line construction. C# references `System.Windows.Forms` directly — no subprocess, no PowerShell dependency, and the picker is a native Windows dialog, not a COM wrapper launched through a shell command.
+
+### Why a folder picker instead of command-line arguments
+
+Directory comparison is inherently interactive — you need two paths. A folder picker is faster than typing paths (especially long Windows paths), eliminates typos, and shows the actual directory tree. `dirdiff` is a fire-and-forget tool: run it, pick two folders, get the report.
+
+### Why parallel hashing
+
+SHA256 of large files is CPU-bound. Hashing sequentially can take minutes for directories with many large files (videos, ISOs, disk images). `Parallel.ForEach` with 8 threads saturates modern CPUs while remaining I/O-bound for smaller files (SSD).
+
+### Why no recursive diff / subdirectory breakdown
+
+The report lists files that differ but doesn't group them by subdirectory or show a tree view. This is intentional: the output is flat and grep-friendly. If you need a tree breakdown, pipe the output through a script.
+
+### Why `OpenFileDialog` repurposed as folder picker
+
+The classic `FolderBrowserDialog` is an XP-era tree widget that doesn't support the address bar, search, or Favorites. The `OpenFileDialog` with `ValidateNames=false` and `CheckFileExists=false` provides the full modern Explorer experience — breadcrumb navigation, quick access, search, and network path entry.
+
+---
+
+## Known limitations
+
+- **No single-file diff** — dirdiff compares presence and hashes but does not show line-by-line or binary diffs of mismatched files. For text files, use a dedicated diff tool.
+- **No filtering** — all files are included. There is no way to exclude paths or extensions. Add `.gitignore`-style filtering at the shell level (`dirdiff | grep ...`).
+- **Large directories** — the file map is held in memory. For directories with millions of files (unlikely for a copy-verification use case), memory usage may be significant.
+- **No remote / network paths** — `Directory.EnumerateFiles` works with mapped drives and UNC paths, but performance depends on network speed. Hashing large files over the network is slow.
+- **Hash progress is approximate** — because files complete in non-deterministic order (thread pool), the `N/M` counter advances per completed hash, not per file position.
 
 ---
 
@@ -97,127 +157,25 @@ This overwrites itself via carriage return. The final count is left visible afte
 
 | Aspect | Status |
 |---|---|
-| Python version | 3.8+ (f-strings, `pathlib` features) |
-| OS | Windows only (PowerShell folder picker) |
-| Dependencies | None beyond stdlib |
-| Unicode paths | Supported (PowerShell emits UTF-8, `pathlib` handles natively) |
-| Network drives | Works if accessible from PowerShell |
-| Very long paths | Depends on Windows path length support |
-| Large file sets | Bounded by available RAM (full file map in memory) |
+| OS | Windows 7+ (requires .NET Framework 4.0+) |
+| Architecture | x64 (`Framework64\csc.exe`; recompile for x86 if needed) |
+| Folder picker | Modern Explorer-style (`OpenFileDialog`) |
+| .NET version | Compiled against .NET Framework 4.0 (csc.exe v4.0.30319) |
+| Dependencies | `System.Windows.Forms.dll` (ships with .NET Framework) |
 
-The script is Windows-only because the folder picker calls `powershell.exe` with `System.Windows.Forms`. The scanning and hashing logic is cross-platform, but there is no non-Windows fallback for folder selection.
+### .NET Framework
 
----
+The tool targets .NET Framework 4.0, which is included in Windows 8+ and available as an update for Windows 7. The compiler at `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe` is installed as part of the .NET Framework SDK component of Windows.
 
-## Output format
+For 32-bit systems, use `C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe` instead. Edit `build.bat` to point to the correct path.
 
-The report is plain text formatted for terminal readability, not machine parsing:
+### Comparison to the Python predecessor
 
-```
-  ================================================
-  Directory Comparison Report
-  ================================================
-
-  Source:      D:\originals
-  Dest:        D:\backup\originals
-
-  ──────────────────────────────────────────────────
-
-  Scanning directories...
-
-  Files present:     957 / 959      ( 99.8%)
-
-  Missing files (2):
-
-    - subdir\notes.txt
-    - config.ini
-
-
-  ──────────────────────────────────────────────────
-
-  Sizes matched:     957 / 957      (100.0%)
-
-  ──────────────────────────────────────────────────
-
-  Computing SHA256 hashes (957/957)
-
-  Hashes matched:    957 / 957      (100.0%)
-
-  ──────────────────────────────────────────────────
-
-  All 959 files verified OK.
-```
-
-There is no `--json` or `--csv` flag. For machine-consumable output, the source code's data structures (`src_map`, `dst_map`, the mismatch lists) are trivially accessible by importing the module.
-
----
-
-## Comparison phases
-
-### Filename presence
-
-The relative path is the primary key. A file that exists in source under `docs/readme.txt` is matched against `docs/readme.txt` in dest. If the path doesn't exist in dest, it's "missing" regardless of whether the same content exists elsewhere under a different name.
-
-### Size comparison
-
-`st_size` from `os.stat()` is compared. A mismatch of even 1 byte is reported. Zero-byte files are handled correctly — if both sides are zero bytes, they match.
-
-### Hash comparison
-
-SHA256 is computed on the full file content, read in 1 MB chunks. Both sides of each pair are hashed in the same worker thread so that a slow disk on one side doesn't delay the other side's results. A mismatch means the content is different with cryptographic certainty.
-
----
-
-## Concurrency
-
-Hash workers: 8 threads in a `ThreadPoolExecutor`. This is a fixed constant, not configurable.
-
-Each worker sequentially opens and hashes one source + one destination file pair. The pool is not saturated by individual file pairs — the parallelism comes from having multiple file pairs being hashed simultaneously. For an SSD, 8 concurrent readers is well within the device's queue depth and keeps the pipeline filled without overwhelming the scheduler.
-
----
-
-## Error handling
-
-| Scenario | Handling |
+| Python version (archived `dirdiff_old`) | C# version |
 |---|---|
-| Dialog fails to launch | `DialogUnavailable` raised → exit code 1 with message |
-| User cancels dialog | `sys.exit(1)` with "No folder selected" |
-| Selected path not a directory | `sys.exit(1)` with message |
-| File cannot be stat'd during scan | Warning printed, file skipped |
-| File cannot be opened for hashing | Counted as hash error, listed separately |
-| KeyboardInterrupt (Ctrl+C) | Clean exit with "Interrupted" message |
-
----
-
-## Design decisions
-
-### Why SHA256 and not a faster algorithm
-
-SHA256 is the default choice for verification because:
-- Collision resistance matters for verification — even if the chance is negligible for random bit flips, SHA256 removes the question entirely.
-- The stdlib `hashlib` module provides it without any dependency.
-- File-reading throughput is the bottleneck, not the hash function. Switching to SHA1 or MD5 would not meaningfully speed up a disk-bound operation.
-
-### Why 8 workers
-
-8 threads is a reasonable default for a desktop machine with an SSD. Hashing is CPU-light and I/O-bound per thread; more threads than CPU cores doesn't hurt since each thread spends most of its time waiting for `read()` to return. 8 keeps the pool small enough not to overwhelm the OS scheduler.
-
-### Why the folder picker and not a CLI argument
-
-The script is designed for occasional use — "did this copy succeed?" — not for automation. A native GUI dialog is more ergonomic than typing two paths for this use case. The same PowerShell dialog pattern is shared with `clean.py` for consistency.
-
-### Why no multiprocessing
-
-Hashing is I/O-bound, not CPU-bound. Python threads are sufficient because the GIL is released during `read()` and `hashlib.update()` calls. Multiprocessing would add overhead (pickling file paths, IPC) without meaningful throughput gain.
-
----
-
-## Known limitations
-
-- **No recursive comparison of empty directories** — empty folders produce no file entries and are invisible to the comparison.
-- **No progress indicator during directory scan** — only during the hash phase. For very large trees (>100k files), the initial `os.walk` can take noticeable time without feedback.
-- **Windows-only** — the folder picker relies on `System.Windows.Forms`.
-- **No typed-path fallback** — if the PowerShell dialog fails, the script exits. There is no "enter path manually" mode.
-- **120-second dialog timeout** — if the system is locked or the dialog doesn't close, `subprocess.run` times out.
-- **File changes during scan** — no locks are held. Files created/deleted during scanning produce an inconsistent point-in-time snapshot. Acceptable for post-copy verification.
-- **Symlinks not followed** — `os.walk` uses `followlinks=False`. Symlinks are compared as files (size + hash of the link target if resolvable).
+| Requires Python 3.8+ | Standalone `.exe`, no runtime |
+| Folder picker via PowerShell subprocess | Native `OpenFileDialog`, no subprocess |
+| `os.walk` | `Directory.EnumerateFiles` |
+| `concurrent.futures` (8 workers) | `Parallel.ForEach` (8 threads) |
+| `hashlib.sha256` (1 MB chunks) | `SHA256.Create()` (1 MB chunks) |
+| pip-installable | Copy `bin\` and run |

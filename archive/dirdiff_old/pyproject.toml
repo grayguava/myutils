@@ -5,8 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dirdiff"
 version = "1.0.0"
-description = "Verify a directory copy by comparing filenames, sizes, and SHA256 hashes"
+description = "Compare two directories by filename, size, and SHA256"
 requires-python = ">=3.8"
+dependencies = []
 
 [project.scripts]
 dirdiff = "dirdiff:main"
