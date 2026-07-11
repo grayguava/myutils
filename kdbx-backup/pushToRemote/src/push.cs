@@ -112,12 +112,15 @@ namespace kdbxPushToRemote
             var psi = new ProcessStartInfo
             {
                 FileName               = RclonePath,
-                Arguments              = "copy \"" + SourceDir + "\" \"" + destination + "\" --stats-one-line",
                 UseShellExecute        = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError  = true,
                 CreateNoWindow         = true,
             };
+            psi.ArgumentList.Add("copy");
+            psi.ArgumentList.Add(SourceDir);
+            psi.ArgumentList.Add(destination);
+            psi.ArgumentList.Add("--stats-one-line");
 
             var outputBuffer = new StringBuilder();
             var errorBuffer  = new StringBuilder();
