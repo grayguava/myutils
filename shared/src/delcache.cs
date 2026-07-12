@@ -8,7 +8,8 @@ class Program {
         string root = args.Length > 0 ? args[0] : ".";
 
         string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        string configPath = Path.Combine(exeDir, "cacheDirs.ini");
+        string confDir = Path.GetFullPath(Path.Combine(exeDir, "..", "conf"));
+        string configPath = Path.Combine(confDir, "cacheDirs.ini");
 
         var targets = LoadTargets(configPath);
         if (targets.Count == 0) {

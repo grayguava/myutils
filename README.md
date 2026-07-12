@@ -6,12 +6,17 @@ Personal collection of utility tools I've built for daily use on Windows. Covers
 |---|---|---|---|
 | `wallswitch/` | C# | Yes — standalone `.exe` | On-demand wallpaper randomizer with a shuffle queue (no repeats until all images are shown). Compiled with `csc.exe` — no runtime install needed. |
 | `kdbx-backup/` | C# | Yes — two standalone `.exe` files | Backup pipeline for KeePass `.kdbx` files. An always-on watcher daemon snapshots databases on file change; a scheduler-triggered tool pushes snapshots to cloud remotes via rclone. |
-| `delcache/` | C# | Yes — standalone `.exe` | Finds and deletes cache/temp directories (`__pycache__`, `node_modules`, etc.). Config-driven — add targets in `cacheDirs.ini`. Recursive, Y/N prompt, no Python dependency. Built with `csc.exe`. Supersedes `delpyc/` (archived). |
-| `dirdiff/` | C# | Yes — standalone `.exe` | Compares two directories by filename, size, and SHA256. Opens native Windows folder pickers (`FolderBrowserDialog`). Hashes in parallel (8 threads). Built with `csc.exe`. |
+| `shared/` | C# | Yes — all `.exe` files in `shared/bin/` | Unified directory for portable CLI tools. Contains `delcache` (find/delete cache dirs) and `dirdiff` (directory comparison). Config in `conf/`, sources in `src/`. Add **one** PATH entry (`shared/bin/`) for all tools. See [`shared/README.md`](shared/README.md). |
 | `exiftool/` | Python | No — run directly (`python src/clean.py`) | Strips EXIF/IPTC/XMP/metadata from images, videos, and PDFs. Safe copy-then-swap workflow with full rollback on failure. Requires `exiftool` CLI on PATH. |
 | [`archive/`](archive/README.md) | — | — | Retired/abandoned tools kept for reference. |
 
-**Portable** means the tool is a standalone `.exe` compiled with Windows' built-in `csc.exe` — no runtime, no install step, just copy and run.
+**Portable** means the tool is a standalone `.exe` compiled with Windows' built-in `csc.exe` — no runtime, no install step, just copy and run. CLI tools are colocated in `shared/bin/` so a single PATH entry covers all of them.
+
+### Why `shared/` exists instead of standalone tools?
+
+Windows `setx PATH` has a ~2048-character limit. Each standalone `bin\` entry costs ~40–60 characters, so adding multiple bin entries would hit the ceiling. By putting every CLI `.exe` in one `bin/`, only **one** PATH entry is needed. Tools that don't need PATH access (e.g. `kdbx-backup`, `wallswitch`) stay in their own directories — `shared/` is only for commands you type in a terminal.
+
+Each tool inside `shared/` is fully independent — removing one `.exe` and its config file won't affect any other tool. The entire `shared/` folder is portable: copy it anywhere, add `bin/` to PATH, and all CLI tools work.
 
 ## Highlights
 

@@ -9,10 +9,12 @@ if not exist "%CSC%" (
 
 if not exist bin\ md bin
 
+echo Building dirdiff...
 "%CSC%" /nologo /optimize+ /reference:System.Windows.Forms.dll /target:exe /out:bin\dirdiff.exe src\dirdiff.cs
+if %ERRORLEVEL% NEQ 0 exit /b 1
 
-if %ERRORLEVEL% EQU 0 (
-    echo Build succeeded: bin\dirdiff.exe
-) else (
-    echo Build failed.
-)
+echo Building delcache...
+"%CSC%" /nologo /optimize+ /target:exe /out:bin\delcache.exe src\delcache.cs
+if %ERRORLEVEL% NEQ 0 exit /b 1
+
+echo All builds succeeded.
