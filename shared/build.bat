@@ -10,7 +10,7 @@ if not exist "%CSC%" (
 if not exist bin\ md bin
 
 echo Building dirdiff...
-"%CSC%" /nologo /optimize+ /reference:System.Windows.Forms.dll /target:exe /out:bin\dirdiff.exe src\dirdiff.cs
+"%CSC%" /nologo /optimize+ /define:WINDOWS /reference:System.Windows.Forms.dll /target:exe /out:bin\dirdiff.exe src\dirdiff.cs
 if %ERRORLEVEL% NEQ 0 exit /b 1
 
 echo Building delcache...

@@ -69,16 +69,23 @@ If the file is missing or empty, defaults to `__pycache__` and `node_modules`.
 Compares two directories by filename, size, and SHA256. Opens native Explorer-style folder pickers and prints a detailed report.
 
 ```
-dirdiff
+dirdiff [<source> <destination>]
 ```
 
-No arguments, no config file. Two folder pickers pop up sequentially.
+### Modes
+
+| Args | Behavior |
+|---|---|
+| `dirdiff "D:\src" "D:\dst"` | Compare the two paths directly — works on any OS |
+| `dirdiff` | Opens two Explorer-style folder pickers (Windows only) |
+
+No config file.
 
 ### How it works
 
-#### Folder picker
+#### Source and destination
 
-Uses `OpenFileDialog` with `ValidateNames = false` and `CheckFileExists = false` — the same trick the old Python version used through PowerShell, but called directly from C# without a subprocess. Provides the full modern Explorer experience: address bar, search, quick access, network path entry.
+If two arguments are provided, they're used directly as source and destination paths — this works on any OS. If no arguments are given (Windows only), two Explorer-style folder pickers pop up sequentially using `OpenFileDialog` with `ValidateNames = false` and `CheckFileExists = false` — the same trick the old Python version used through PowerShell, but called directly from C# without a subprocess.
 
 #### Directory scanning
 

@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+#if WINDOWS
 using System.Windows.Forms;
+#endif
 
 class Program {
     static string HR = new string('\u2500', 50);
@@ -15,20 +17,32 @@ class Program {
     }
 
     [STAThread]
-    static void Main() {
+    static void Main(string[] args) {
+        string sourceRoot, destRoot;
+
+        if (args.Length >= 2) {
+            sourceRoot = args[0];
+            destRoot   = args[1];
+        } else {
+#if WINDOWS
+            Console.Write("  Source:     ");
+            sourceRoot = PickFolder("SOURCE directory");
+            Console.Write("\r  Source:      " + sourceRoot + "\n");
+
+            Console.Write("  Dest:       ");
+            destRoot = PickFolder("DESTINATION directory (the copy)");
+            Console.Write("\r  Dest:        " + destRoot + "\n");
+#else
+            Console.Error.WriteLine("Usage: dirdiff <source> <destination>");
+            return;
+#endif
+        }
+
         Console.WriteLine();
         Console.WriteLine("  " + new string('=', 48));
         Console.WriteLine("  Directory Comparison Report");
         Console.WriteLine("  " + new string('=', 48));
         Console.WriteLine();
-
-        Console.Write("  Source:     ");
-        string sourceRoot = PickFolder("SOURCE directory");
-        Console.Write("\r  Source:      " + sourceRoot + "\n");
-
-        Console.Write("  Dest:       ");
-        string destRoot = PickFolder("DESTINATION directory (the copy)");
-        Console.Write("\r  Dest:        " + destRoot + "\n");
 
         Console.WriteLine();
         Console.WriteLine("  " + HR);
