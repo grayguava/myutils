@@ -7,3 +7,4 @@
 | `torui/` | Python | No — pip install required | Abandoned live terminal dashboard for a local Tor daemon. Uses `rich` and `stem`. |
 | `PCHealth/` | PowerShell | Yes — run `.ps1` directly | Collection of scripts for system health telemetry (temps, storage, network, software, events, drivers, file integrity). |
 | `dirdiff_old/` | Python | No — pip install required | Superseded by `shared/bin/dirdiff.exe` (C# rewrite). Compares two directories by filename, size, and SHA256. Stdlib-only. |
+| `exiftool_old/python/` | Python | No — run `python src/clean.py` | Strips EXIF/IPTC/XMP/metadata from images, videos, and PDFs. Requires `exiftool` CLI on PATH. PowerShell-based file dialog. |
