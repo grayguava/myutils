@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 public class Config
@@ -17,6 +18,25 @@ public class Config
     public Config()
     {
         SmartCtlPath = "smartctl";
+    }
+
+    static string NormalizeSmartCtlPath(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "smartctl";
+        string trimmed = raw.Trim();
+        if (!trimmed.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '-' || c == '.' || c == ':' || c == '\\' || c == '/'))
+            return "smartctl";
+        string name = Path.GetFileName(trimmed);
+        if (!string.Equals(name, "smartctl", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(name, "smartctl.exe", StringComparison.OrdinalIgnoreCase))
+            return "smartctl";
+        return trimmed;
+    }
+
+    static bool IsSafeDeviceName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        return value.All(c => char.IsLetterOrDigit(c) || c == '/' || c == '.' || c == '_' || c == '-');
     }
 
     public static Config Load(string path)
@@ -37,9 +57,9 @@ public class Config
         if (values.ContainsKey("Drives"))
             config.Drives = ParseList(values["Drives"]);
         if (values.ContainsKey("SmartCtlPath"))
-            config.SmartCtlPath = values["SmartCtlPath"];
+            config.SmartCtlPath = NormalizeSmartCtlPath(values["SmartCtlPath"]);
         if (values.ContainsKey("SmartDevices"))
-            config.SmartDevices = ParseList(values["SmartDevices"]);
+            config.SmartDevices = ParseList(values["SmartDevices"]).Where(IsSafeDeviceName).ToList();
         if (values.ContainsKey("SmartAttrs"))
         {
             var attrs = new List<int>();
