@@ -3,7 +3,7 @@ Personal collection of utility tools built for daily use on Windows. Covers file
 ## Tools
 
 | Tool | Lang | Portable | Description |
-|---|---|---|---|---|
+|---|---|---|---|
 | [wallswitch/](wallswitch/README.md) | C# | Yes | Wallpaper randomizer with shuffle queue. |
 | [kdbx-backup/](kdbx-backup/README.md) | C# | Yes | KeePass backup pipeline with watcher daemon + rclone push. |
 | shared/ | C# | Yes | Portable CLI tool collection. One PATH entry for all. See [README](shared/README.md). |
