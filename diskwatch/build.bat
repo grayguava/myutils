@@ -10,7 +10,7 @@ if not exist "%CSC%" (
 if not exist bin\ md bin
 
 echo Building diskwatch...
-"%CSC%" /nologo /optimize+ /reference:System.Runtime.Serialization.dll,System.Windows.Forms.dll,System.Web.Extensions.dll /target:winexe /out:bin\diskwatch.exe src\*.cs
+"%CSC%" /nologo /optimize+ /reference:System.Windows.Forms.dll,System.Web.Extensions.dll /target:winexe /out:bin\diskwatch.exe src\*.cs
 if %ERRORLEVEL% EQU 0 (
     echo Build succeeded: bin\diskwatch.exe
 ) else (

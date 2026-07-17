@@ -5,23 +5,23 @@ using System.Windows.Forms;
 
 class Remind
 {
-    static string LogsDir()
+    static string ResultPath()
     {
         return Path.GetFullPath(Path.Combine(
             Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-            "..", "logs"));
+            "..", "logs", "result.json"));
     }
 
     public static int Show()
     {
-        string resultPath = Path.Combine(LogsDir(), "result.json");
+        string resultPath = ResultPath();
         if (!File.Exists(resultPath))
         {
             Console.Error.WriteLine("No report found. Run diskwatch first.");
             return 1;
         }
 
-        var state = MasterStateManager.Load();
+        var state = MasterStateManager.Load(resultPath);
         if (state == null)
         {
             Console.Error.WriteLine("Could not read report.");

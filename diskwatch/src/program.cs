@@ -1,50 +1,49 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 
 class Program
 {
+    struct Command
+    {
+        public string Name;
+        public string Exe;
+        public string Args;
+    }
+
+    static string BaseDir()
+    {
+        return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+    }
+
     static int Main(string[] args)
     {
         if (args.Length > 0 && (args[0] == "--remind" || args[0] == "/remind"))
             return Remind.Show();
 
-        var config = Config.Load(Path.Combine(Config.BaseDir(), "config.ini"));
-        string logsDir = Path.GetFullPath(Path.Combine(Config.BaseDir(), "..", "logs"));
+        string baseDir = BaseDir();
+        string logsDir = Path.GetFullPath(Path.Combine(baseDir, "..", "logs"));
         string runDir = Path.Combine(logsDir, DateTime.Now.ToString("yyyy-MM-ddTHH-mm-ss"));
 
-        // Run all checks
-        foreach (string drive in config.Drives)
-        {
-            string d = drive.TrimEnd(':');
-            string o;
-            CommandRunner.Run("fsutil", "dirty query " + d + ":", out o);
-            SaveRaw(runDir, "fsutil_" + d, 0, o);
+        var commands = LoadCommands(Path.Combine(baseDir, "commands.ini"));
+        var smartAttrs = LoadSmartAttrs(Path.Combine(baseDir, "smartAttributes.ini"));
 
-            int code;
-            code = CommandRunner.Run("chkdsk", d + ": /scan", out o);
-            SaveRaw(runDir, "chkdsk_" + d, code, o);
+        foreach (var cmd in commands)
+        {
+            string output;
+            int code = CommandRunner.Run(cmd.Exe, cmd.Args, out output);
+            SaveRaw(runDir, cmd.Name, code, output);
         }
 
-        foreach (string device in config.SmartDevices)
-        {
-            string label = device.StartsWith("/dev/") ? device.Substring(5) : device;
-            string o;
-            int code = CommandRunner.Run(config.SmartCtlPath, "-x \"" + device + "\"", out o);
-            SaveRaw(runDir, "smartctl_" + label, code, o);
-        }
+        string evtLog = ReadWininitLog();
+        SaveRaw(runDir, "wininit", 0, evtLog ?? "");
 
-        {
-            string o = ReadWininitLog();
-            SaveRaw(runDir, "wininit", 0, o ?? "");
-        }
+        string resultPath = Path.Combine(logsDir, "result.json");
+        var prev = MasterStateManager.Load(resultPath);
+        var curr = MasterStateManager.Build(runDir, smartAttrs);
+        MasterStateManager.Save(resultPath, curr);
 
-        // Build and compare state
-        var prev = MasterStateManager.Load();
-        var curr = MasterStateManager.Build(config, runDir);
-        MasterStateManager.Save(curr);
-
-        // Keep only latest 5 run directories
         var dirs = new List<string>(Directory.GetDirectories(logsDir));
         dirs.Sort();
         while (dirs.Count > 5)
@@ -55,20 +54,17 @@ class Program
 
         var changes = MasterStateManager.Diff(prev, curr);
 
-        // Print verdict
         foreach (var kv in curr.Drives)
         {
             string icon = kv.Value.Filesystem == "clean" ? "\u2713" : "!";
             Console.WriteLine("  " + icon + " " + kv.Key + ": " + kv.Value.Filesystem
                 + (kv.Value.BadSectorsKb > 0 ? "  bad sectors " + kv.Value.BadSectorsKb + " KB" : ""));
         }
-
         foreach (var kv in curr.Smart)
         {
             Console.WriteLine("  \u2713 " + kv.Key + "  " + kv.Value.Health
                 + (kv.Value.Endurance >= 0 ? "  endurance " + kv.Value.Endurance + "%" : ""));
         }
-
         Console.WriteLine("  \u2713 No repairs");
 
         if (changes.Count > 0)
@@ -88,25 +84,85 @@ class Program
         return 0;
     }
 
+    static List<Command> LoadCommands(string path)
+    {
+        var commands = new List<Command>();
+        if (!File.Exists(path)) return commands;
+        string section = null;
+        foreach (string rawLine in File.ReadAllLines(path))
+        {
+            string line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";")) continue;
+            if (line.StartsWith("[") && line.EndsWith("]"))
+            {
+                section = line.Substring(1, line.Length - 2);
+                continue;
+            }
+            if (section == null) continue;
+            int sep = line.IndexOf(' ');
+            string exe = sep > 0 ? line.Substring(0, sep) : line;
+            string args = sep > 0 ? line.Substring(sep + 1) : "";
+            string suffix = MakeSuffix(args);
+            commands.Add(new Command { Name = section + "_" + suffix, Exe = exe, Args = args });
+        }
+        return commands;
+    }
+
+    static string MakeSuffix(string args)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(args, @"\b([A-Za-z]):");
+        if (m.Success) return m.Groups[1].Value.ToUpperInvariant();
+        string[] parts = args.Split(' ');
+        string last = parts[parts.Length - 1];
+        int slash = last.LastIndexOfAny(new char[] { '/', '\\' });
+        return slash >= 0 ? last.Substring(slash + 1) : last;
+    }
+
+    static List<int> LoadSmartAttrs(string path)
+    {
+        var attrs = new List<int>();
+        if (!File.Exists(path)) return attrs;
+        foreach (string rawLine in File.ReadAllLines(path))
+        {
+            string line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";")) continue;
+            int id;
+            if (int.TryParse(line, out id)) attrs.Add(id);
+        }
+        return attrs;
+    }
+
     static void SaveRaw(string dir, string name, int exitCode, string output)
     {
-        var r = new ResultFile
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, name + ".json");
+        File.WriteAllText(path,
+            "{\"ExitCode\":" + exitCode + ",\"Output\":" + EncodeJson(output ?? "") + "}");
+    }
+
+    static string EncodeJson(string s)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append('"');
+        foreach (char c in s)
         {
-            LastRun = DateTime.Now.ToString("o"),
-            ExitCode = exitCode,
-            Output = output ?? ""
-        };
-        Results.Save(dir, name, r);
+            if (c == '"') sb.Append("\\\"");
+            else if (c == '\\') sb.Append("\\\\");
+            else if (c == '\r') sb.Append("\\r");
+            else if (c == '\n') sb.Append("\\n");
+            else if (c == '\t') sb.Append("\\t");
+            else sb.Append(c);
+        }
+        sb.Append('"');
+        return sb.ToString();
     }
 
     static string ReadWininitLog()
     {
         string[] logNames = {
             "Microsoft-Windows-Wininit/Operational",
-            "System",
-            "Application"
+            "System", "Application"
         };
-
         foreach (string logName in logNames)
         {
             try
@@ -115,27 +171,23 @@ class Program
                 {
                     var sb = new System.Text.StringBuilder();
                     int count = Math.Min(log.Entries.Count, 50);
-
                     for (int i = log.Entries.Count - 1; i >= log.Entries.Count - count && i >= 0; i--)
                     {
                         var entry = log.Entries[i];
                         bool isRepair = (entry.Source != null
-                                         && entry.Source.IndexOf("wininit", StringComparison.OrdinalIgnoreCase) >= 0
-                                         && (entry.InstanceId == 262 || entry.InstanceId == 264
-                                             || (entry.Message != null
-                                                 && entry.Message.IndexOf("repair", StringComparison.OrdinalIgnoreCase) >= 0)))
-                                     || (entry.EntryType == System.Diagnostics.EventLogEntryType.Warning
-                                         && entry.Message != null
-                                         && entry.Message.IndexOf("disk", StringComparison.OrdinalIgnoreCase) >= 0
-                                         && entry.Message.IndexOf("repair", StringComparison.OrdinalIgnoreCase) >= 0);
-
+                            && entry.Source.IndexOf("wininit", StringComparison.OrdinalIgnoreCase) >= 0
+                            && (entry.InstanceId == 262 || entry.InstanceId == 264
+                                || (entry.Message != null
+                                    && entry.Message.IndexOf("repair", StringComparison.OrdinalIgnoreCase) >= 0)))
+                            || (entry.EntryType == System.Diagnostics.EventLogEntryType.Warning
+                                && entry.Message != null
+                                && entry.Message.IndexOf("disk", StringComparison.OrdinalIgnoreCase) >= 0
+                                && entry.Message.IndexOf("repair", StringComparison.OrdinalIgnoreCase) >= 0);
                         if (isRepair)
-                        {
                             sb.AppendLine(entry.TimeGenerated.ToString("yyyy-MM-dd HH:mm")
-                                + "  " + entry.Source + "  " + (entry.Message ?? "").Replace("\r\n", " ").Replace("\n", " "));
-                        }
+                                + "  " + entry.Source + "  "
+                                + (entry.Message ?? "").Replace("\r\n", " ").Replace("\n", " "));
                     }
-
                     if (sb.Length > 0)
                     {
                         sb.Insert(0, "Source log: " + logName + "\n");
@@ -145,7 +197,6 @@ class Program
             }
             catch { continue; }
         }
-
         return "";
     }
 }

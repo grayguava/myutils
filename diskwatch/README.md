@@ -76,23 +76,44 @@ Scans up to 50 recent entries across three logs (Wininit/Operational, System, Ap
 
 ## Configuration
 
-`bin/config.ini`:
+### commands.ini
+
+`bin/commands.ini` lists every command to run, grouped by section. Each section is a command category; each line under it is a full command:
 
 ```ini
-Drives=C,D
-SmartCtlPath=smartctl
-SmartDevices=/dev/sda
-SmartAttrs=5,196,197,198
+[fsutil]
+fsutil dirty query C:
+fsutil dirty query D:
+
+[chkdsk]
+chkdsk C: /scan
+chkdsk D: /scan
+
+; For SMART monitoring:
+; [smartctl]
+; smartctl -x /dev/sda
 ```
 
-| Key | Default | Description |
-|---|---|---|
-| `Drives` | C | Comma-separated drive letters to check with fsutil and chkdsk |
-| `SmartCtlPath` | smartctl | Path to smartctl executable (on PATH or full path) |
-| `SmartDevices` | (none) | Comma-separated device paths for smartctl (e.g. /dev/sda, /dev/sdb) |
-| `SmartAttrs` | 5,9,197,198,190 | Comma-separated SMART attribute IDs to track per device |
+The first word of each line is the executable, the rest are its arguments. Section names determine how the parser interprets output:
+- `[fsutil]` — dirty bit check via fsutil. Drive letter extracted from output.
+- `[chkdsk]` — read-only filesystem scan. Drive letter extracted from output.
+- `[smartctl]` — SMART data. Device keyed by section+index.
 
-All values support comma-separated lists. Lines starting with `#` are comments.
+The Event Log reader is built-in (uses .NET EventLog API, not an external command).
+
+### smartAttributes.ini
+
+`bin/smartAttributes.ini` lists SMART attribute IDs to track, one per line:
+
+```ini
+5
+9
+197
+198
+190
+```
+
+Only these IDs are tracked across runs and flagged on change. Lines starting with `#` are comments.
 
 ---
 
@@ -166,10 +187,10 @@ logs/
 Each file contains:
 
 ```json
-{"LastRun":"2026-07-17T14:30:00","ExitCode":0,"Output":"..."}
+{"ExitCode":0,"Output":"..."}
 ```
 
-Raw output files are serialized with `DataContractJsonSerializer` (compact, no pretty printing).
+Raw output files use inline JSON (compact, no pretty printing).
 
 ### Log retention
 
@@ -194,7 +215,7 @@ The popup is informational only — click OK to dismiss.
 
 - .NET Framework 4.0+ (ships with Windows 8+; available for Windows 7).
 - `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe` — part of the .NET Framework SDK.
-- `System.Runtime.Serialization.dll`, `System.Web.Extensions.dll`, `System.Windows.Forms.dll` — reference assemblies that ship with .NET Framework.
+- `System.Web.Extensions.dll`, `System.Windows.Forms.dll` — reference assemblies that ship with .NET Framework.
 
 ### Build
 
@@ -209,15 +230,14 @@ Compiles all source files in `src/` to `bin/diskwatch.exe`. No Visual Studio, no
 ```
 diskwatch/
 ├── src/
-│   ├── program.cs           ← Main(), --remind, orchestrates checks, popup
-│   ├── config.cs            ← INI reader with comma-list parsing
+│   ├── program.cs           ← Main(), --remind, runs commands, Event Log reader, popup
 │   ├── commandrunner.cs     ← Process launcher (no timeout)
-│   ├── resultfile.cs        ← Raw output save/load via DataContractJsonSerializer
-│   ├── masterstate.cs       ← State model, parsing, diff, pretty JSON writer
+│   ├── parser.cs            ← State model, parsing, diff, pretty JSON
 │   └── remind.cs            ← MessageBox popup with summary
 ├── bin/
 │   ├── diskwatch.exe         ← compiled binary (build output)
-│   └── config.ini            ← configuration
+│   ├── commands.ini          ← commands to run (edit this)
+│   └── smartAttributes.ini   ← SMART attr IDs to track (edit this)
 ├── logs/                     ← auto-created, holds result.json + raw output dirs
 ├── build.bat
 └── README.md
@@ -267,9 +287,9 @@ Disk health checks are IO-intensive (fsutil, chkdsk, smartctl all read from disk
 - **Admin required** — run as Administrator. Without elevation, fsutil reports "Access Denied", chkdsk
   cannot scan, and smartctl may show limited data.
 - **Windows-only** — uses fsutil, chkdsk, and Windows Event Log.
-- **smartctl optional but manual** — must be installed and configured in config.ini if you want SMART
+- **smartctl optional but manual** — must be installed and configured in commands.ini if you want SMART
   checks. Not bundled.
-- **No drive discovery** — configure every drive and device in config.ini.
+- **No drive discovery** — configure every drive in commands.ini and SMART attrs in smartAttributes.ini.
 - **No daemon mode** — use Task Scheduler for periodic runs.
 - **Event log filtering is heuristic** — the wininit/repair event detection is based on keyword
   matching and may miss or falsely flag events depending on Windows version and language.
