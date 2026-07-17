@@ -57,16 +57,20 @@ class Program
         }
 
         Console.WriteLine("Sorting files in " + targetDir);
-        if (_dryRun) Console.WriteLine("  (dry run, no changes)");
+        if (_dryRun) Console.WriteLine("  (dry run)");
         Console.WriteLine();
 
         string[] files = Directory.GetFiles(targetDir);
+        string parentDirName = Path.GetFileName(targetDir);
         foreach (string file in files)
-            ProcessFile(file, targetDir);
+            ProcessFile(file, targetDir, parentDirName);
 
         Console.WriteLine();
-        Console.WriteLine("  Done.  " + _copied + " copied, "
-            + _verified + " verified, " + _failed + " failed.");
+        if (_dryRun)
+            Console.WriteLine("  Dry run.  " + _copied + " would move.");
+        else
+            Console.WriteLine("  Done.  " + _copied + " copied, "
+                + _verified + " verified, " + _failed + " failed.");
 
         return _failed > 0 ? 1 : 0;
     }
@@ -101,7 +105,7 @@ class Program
         }
     }
 
-    static void ProcessFile(string filePath, string targetDir)
+    static void ProcessFile(string filePath, string targetDir, string parentDirName)
     {
         string fileName = Path.GetFileName(filePath);
         string ext = Path.GetExtension(filePath).ToLowerInvariant();
@@ -110,6 +114,10 @@ class Program
         {
             if (!cat.Exts.Contains(ext))
                 continue;
+
+            // Skip files already inside a folder matching the category
+            if (string.Equals(parentDirName, cat.Name, StringComparison.OrdinalIgnoreCase))
+                return;
 
             string catDir = Path.Combine(targetDir, cat.Name);
             string destPath = Path.Combine(catDir, fileName);

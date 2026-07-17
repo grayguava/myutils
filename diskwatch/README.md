@@ -1,32 +1,76 @@
 # diskwatch — disk health monitor with change detection
 
+Read-only disk health monitor that runs system checks, compares results against previous state, and alerts you when something changes. Silent when healthy.
+
 - **Tool:** `diskwatch/bin/diskwatch.exe`
 - **Source:** `diskwatch/src/`
 - **Language:** C#, compiled via `csc.exe`
-- **Role:** Read-only disk health monitor. Runs `fsutil`, `chkdsk`, `smartctl`, and Event Log checks; compares against previous state and shows a popup when something changes. Silent when healthy.
+- **Role:** Detection only. Never runs DISM, SFC, chkdsk /f, or SMART self-tests.
 
 ---
 
 ## Usage
 
-```cmd
+```
 diskwatch
 ```
 
 Runs all checks, prints a verdict to the console, and shows a popup with the summary.
 
-```cmd
+```
 diskwatch --remind
 ```
 
-Shows the same popup from the last run without running checks again. Useful for Task Scheduler.
+Shows the same popup from the last run without re-running checks. Useful for Task Scheduler reminders.
 
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
-| `0` | Healthy — no changes since last check |
-| `1` | Something changed |
+| 0 | Healthy — no changes since last check |
+| 1 | Something changed |
+
+---
+
+## What it checks
+
+### fsutil dirty query
+
+Reads the volume dirty bit for each configured drive. A set dirty bit means the filesystem detected corruption and will run chkdsk at next boot.
+
+```
+fsutil dirty query C:
+```
+
+Parsed for: "NOT Dirty" (clean), "is set" (dirty).
+
+### chkdsk /scan
+
+Performs a read-only scan of the filesystem metadata and reports problems without repairing anything.
+
+```
+chkdsk C: /scan
+```
+
+Parsed for:
+- **Access Denied** — tool not elevated, result unknown.
+- **found no problems / No further action** — filesystem is clean.
+- **found problems / problems found** — issues detected.
+- **KB in bad sectors** — exact count of bad sector reallocations.
+
+### smartctl -x
+
+Runs smartctl with full output for each configured device. Parsed for:
+- **Device Model, Serial Number, Firmware Version** — drive identity.
+- **SMART overall-health self-assessment test result** — PASSED/FAILED.
+- **Percentage Used Endurance Indicator** — remaining endurance (NVMe).
+- **Watched attributes** — only the SMART attribute IDs listed in config (raw value tracked per run).
+
+### Windows Event Log
+
+Scans up to 50 recent entries across three logs (Wininit/Operational, System, Application) for disk repair activity. Only flags:
+- Wininit-sourced events with InstanceId 262 or 264.
+- Any Warning event containing both "disk" and "repair" in the message.
 
 ---
 
@@ -41,36 +85,191 @@ SmartDevices=/dev/sda
 SmartAttrs=5,196,197,198
 ```
 
-Only configured `SmartAttrs` IDs are tracked.
+| Key | Default | Description |
+|---|---|---|
+| `Drives` | C | Comma-separated drive letters to check with fsutil and chkdsk |
+| `SmartCtlPath` | smartctl | Path to smartctl executable (on PATH or full path) |
+| `SmartDevices` | (none) | Comma-separated device paths for smartctl (e.g. /dev/sda, /dev/sdb) |
+| `SmartAttrs` | 5,9,197,198,190 | Comma-separated SMART attribute IDs to track per device |
+
+All values support comma-separated lists. Lines starting with `#` are comments.
 
 ---
 
-## State
+## State and change detection
 
-Stored in `logs/result.json`. Raw command output preserved in `logs/<timestamp>/` per run. Only the 5 most recent run directories are kept.
+### result.json
+
+Pretty-printed JSON stored in `logs/result.json` after every run. Contains parsed state for all drives, SMART devices, and the most recent repair timestamp. Loaded via `JavaScriptSerializer` for deserialization; written with a custom pretty-printer.
+
+Structure:
+
+```json
+{
+  "timestamp": "2026-07-17T14:30:00.0000000",
+  "drives": {
+    "C": {
+      "dirty": false,
+      "filesystem": "clean",
+      "badSectorsKb": -1
+    }
+  },
+  "smart": {
+    "/dev/sda": {
+      "model": "Samsung SSD 990 PRO",
+      "serial": "S6P7NJ0W123456",
+      "firmware": "5B2QGXA7",
+      "health": "PASSED",
+      "endurance": 95,
+      "attrs": {
+        "5": 0,
+        "196": 0,
+        "197": 0,
+        "198": 0
+      }
+    }
+  },
+  "lastRepair": null
+}
+```
+
+### Diff comparison
+
+On every run, the current state is compared against the previous state from `result.json`. The following differences trigger a change:
+
+- **Dirty bit** toggled.
+- **Filesystem status** changed (clean / issues / unknown).
+- **Bad sector count** changed.
+- **SMART health** changed (PASSED / FAILED).
+- **SMART endurance** changed.
+- **Any watched SMART attribute raw value** changed.
+- **Repair event timestamp** changed.
+
+If no previous state exists (first run or deleted result.json), no changes are reported.
+
+### Raw output logging
+
+Every run saves the raw command output to `logs/<timestamp>/` directory:
+
+```
+logs/
+├── result.json
+├── 2026-07-17T14-30-00/
+│   ├── fsutil_C.json
+│   ├── chkdsk_C.json
+│   ├── smartctl_sda.json
+│   └── wininit.json
+└── 2026-07-10T09-15-00/
+    └── ...
+```
+
+Each file contains:
+
+```json
+{"LastRun":"2026-07-17T14:30:00","ExitCode":0,"Output":"..."}
+```
+
+Raw output files are serialized with `DataContractJsonSerializer` (compact, no pretty printing).
+
+### Log retention
+
+Only the 5 most recent timestamped run directories are kept. Older runs are pruned automatically on each execution.
 
 ---
 
-## Design
+## Popup
+
+At the end of every normal run (and via `--remind`), a `MessageBox` shows:
+- Run date.
+- Per-drive filesystem status.
+- SMART health and endurance percentage.
+
+The popup is informational only — click OK to dismiss.
+
+---
+
+## Building
+
+### Prerequisites
+
+- .NET Framework 4.0+ (ships with Windows 8+; available for Windows 7).
+- `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe` — part of the .NET Framework SDK.
+- `System.Runtime.Serialization.dll`, `System.Web.Extensions.dll`, `System.Windows.Forms.dll` — reference assemblies that ship with .NET Framework.
+
+### Build
 
 ```
-src/
-├── program.cs         — Main(), --remind, orchestrates checks, popup
-├── config.cs          — INI reader
-├── commandrunner.cs   — Runs processes
-├── resultfile.cs      — Raw output save/load
-├── masterstate.cs     — State model, parsing, diff, pretty JSON
-└── remind.cs          — On-screen popup
+build.bat
 ```
 
-Build with `build.bat`. Requires `System.Runtime.Serialization.dll`, `System.Web.Extensions.dll`, and `System.Windows.Forms.dll` (ship with .NET Framework).
+Compiles all source files in `src/` to `bin/diskwatch.exe`. No Visual Studio, no dotnet CLI, no NuGet, no install step.
+
+### Build output
+
+```
+diskwatch/
+├── src/
+│   ├── program.cs           ← Main(), --remind, orchestrates checks, popup
+│   ├── config.cs            ← INI reader with comma-list parsing
+│   ├── commandrunner.cs     ← Process launcher (no timeout)
+│   ├── resultfile.cs        ← Raw output save/load via DataContractJsonSerializer
+│   ├── masterstate.cs       ← State model, parsing, diff, pretty JSON writer
+│   └── remind.cs            ← MessageBox popup with summary
+├── bin/
+│   ├── diskwatch.exe         ← compiled binary (build output)
+│   └── config.ini            ← configuration
+├── logs/                     ← auto-created, holds result.json + raw output dirs
+├── build.bat
+└── README.md
+```
+
+---
+
+## Design decisions
+
+### Why read-only
+
+diskwatch never repairs, cleans, or modifies the system. It only reads diagnostic data and flags changes. The reasoning: automated repair tools (DISM, SFC, chkdsk /f) can cause more damage than they fix when triggered without human judgment. The tool's job is to tell you something changed — you decide what to do about it.
+
+### Why change detection instead of logging
+
+Logging every run creates noise — most runs are identical. Change detection suppresses the common case (healthy, no changes) and only surfaces deltas. The exit code (0 = clean, 1 = change) makes it scriptable: a Task Scheduler trigger on non-zero exit can send an alert.
+
+### Why raw output is preserved
+
+If the parser misinterprets a tool's output (new Windows version, locale differences), the raw output is still available in `logs/<timestamp>/` for manual inspection without re-running.
+
+### Why smartctl device paths are manual
+
+Auto-detecting drives via WMI or device enumeration adds complexity and can miss devices. A static config list is simpler and more predictable — you know exactly what the tool checks.
+
+### Why no daemon mode
+
+Disk health checks are IO-intensive (fsutil, chkdsk, smartctl all read from disk) and don't need sub-minute granularity. Task Scheduler with a weekly trigger is the right tool for periodic monitoring.
+
+---
+
+## Compatibility
+
+| Aspect | Status |
+|---|---|
+| OS | Windows 7+ (requires .NET Framework 4.0+) |
+| Architecture | x64 (recompile for x86 if needed) |
+| File system checks | NTFS, ReFS (via fsutil + chkdsk) |
+| SMART | Any drive supported by smartctl |
+| Dependencies | None beyond Windows built-ins + optional smartctl |
+| Admin required | Yes — for fsutil, chkdsk, and full smartctl data |
 
 ---
 
 ## Known limitations
 
-- **Admin required** — run as Administrator for `fsutil`, `chkdsk`, and full `smartctl` data.
-- **Windows-only** — uses `fsutil`, `chkdsk`, and Windows Event Log.
-- **smartctl needed for SMART** — optional, but required if you configure SmartDevices.
-- **No drive discovery** — configure drives and devices in `config.ini`.
+- **Admin required** — run as Administrator. Without elevation, fsutil reports "Access Denied", chkdsk
+  cannot scan, and smartctl may show limited data.
+- **Windows-only** — uses fsutil, chkdsk, and Windows Event Log.
+- **smartctl optional but manual** — must be installed and configured in config.ini if you want SMART
+  checks. Not bundled.
+- **No drive discovery** — configure every drive and device in config.ini.
 - **No daemon mode** — use Task Scheduler for periodic runs.
+- **Event log filtering is heuristic** — the wininit/repair event detection is based on keyword
+  matching and may miss or falsely flag events depending on Windows version and language.

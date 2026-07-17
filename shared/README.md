@@ -2,7 +2,7 @@
 
 Single directory housing all portable CLI tools. One `bin/` for PATH, one `conf/` for config files, one `build.bat` to compile everything.
 
-Each tool is fully independent — removing one `.exe` and its config file won't affect any other tool in the directory. The entire `shared/` folder is portable: copy it anywhere, add its `bin/` to PATH, and all tools work.
+Each tool is fully independent — removing one .exe and its config file won't affect any other tool in the directory. The entire shared/ folder is portable: copy it anywhere, add its `bin/` to PATH, and all tools work.
 
 ---
 
@@ -14,7 +14,7 @@ Finds and deletes cache/temp directories (`__pycache__`, `node_modules`, etc.) b
 delcache [path]
 ```
 
-- **`path`** — root directory to search (default: current directory)
+- **path** — root directory to search (default: current directory)
 
 ### Configuration
 
@@ -33,15 +33,15 @@ node_modules
 If the file is missing or empty, defaults to `__pycache__` and `node_modules`.
 
 > [!WARNING]
-> A typo or malicious entry can cause data loss. Always read the found list before typing `y`.
+> A typo or malicious entry can cause data loss. Always read the found list before typing y.
 
 ### How it works
 
-1. Resolves `conf/cacheDirs.ini` relative to the `.exe` location (`shared/bin/delcache.exe` → `shared/conf/cacheDirs.ini`).
+1. Resolves `conf/cacheDirs.ini` relative to the .exe location (`shared/bin/delcache.exe` -> `shared/conf/cacheDirs.ini`).
 2. Reads target directory names from the file — one per line, blank lines and `#` comments ignored.
 3. For each target, calls `Directory.EnumerateDirectories(root, target, SearchOption.AllDirectories)` to find every matching subdirectory at any depth.
 4. Prints the full path of every match, numbered by count.
-5. Prompts `[y/N]` — only proceeds on explicit `y` or `yes`.
+5. Prompts [y/N] — only proceeds on explicit y or yes.
 6. Iterates the list and deletes each directory with `Directory.Delete(path, true)`.
 7. Reports success count and prints failures to stderr (permission errors, locked files).
 
@@ -52,9 +52,9 @@ If the file is missing or empty, defaults to `__pycache__` and `node_modules`.
 
 ### Design decisions
 
-- **Why C# over Python (delpyc):** The original `delpyc` required Python 3.8+ and the `click` package. `delcache` is a standalone `.exe` with zero runtime dependencies — copy and run.
+- **Why C# over Python (delpyc):** The original delpyc required Python 3.8+ and the `click` package. delcache is a standalone .exe with zero runtime dependencies — copy and run.
 - **Why always prompt:** Cache directories are safe to delete in theory, but a typo in `cacheDirs.ini` or a wrong root path can delete the wrong data. Forcing Y/N confirmation on every run ensures you see exactly what will be deleted.
-- **Why a config file:** Adding or removing targets (`node_modules`, `.cache`, `.vs`) doesn't require recompilation. The config file is editable by any text editor.
+- **Why a config file:** Adding or removing targets (node_modules, .cache, .vs) doesn't require recompilation. The config file is editable by any text editor.
 
 ### Known limitations
 
@@ -130,7 +130,7 @@ If two arguments are provided, they're used directly as source and destination p
 - **Why C# over Python:** The original Python dirdiff launched a PowerShell subprocess to show a folder picker. That meant two runtimes (Python + PowerShell) and a fragile command-line construction. C# calls `System.Windows.Forms.OpenFileDialog` directly — no subprocess, no runtime dependencies.
 - **Why a folder picker instead of CLI arguments:** Directory comparison is inherently interactive. A folder dialog is faster, eliminates typos, and shows the actual filesystem tree.
 - **Why parallel hashing:** SHA256 of large files is CPU-bound. Hashing sequentially can take minutes for many large files. `Parallel.ForEach` with 8 threads saturates modern CPUs.
-- **Why `OpenFileDialog` repurposed as a folder picker:** The classic `FolderBrowserDialog` is an XP-era tree widget with no address bar, search, or quick access. The `OpenFileDialog` trick gives the full modern Explorer dialog.
+- **Why OpenFileDialog repurposed as a folder picker:** The classic `FolderBrowserDialog` is an XP-era tree widget with no address bar, search, or quick access. The OpenFileDialog trick gives the full modern Explorer dialog.
 
 ### Known limitations
 
@@ -175,11 +175,11 @@ ext=.zip,.rar,.7z,.tar,.gz,.bz2,.xz
 ext=.mp3,.wav,.flac,.aac,.ogg,.wma,.m4a
 ```
 
-Each `[Category]` section has an `ext=` line with comma-separated extensions. Add or remove categories freely — no recompilation needed.
+Each [Category] section has an `ext=` line with comma-separated extensions. Add or remove categories freely — no recompilation needed.
 
 ### How it works
 
-1. Reads `conf/catsort.ini` relative to the `.exe` location (`shared/bin/catsort.exe` → `shared/conf/catsort.ini`).
+1. Reads `conf/catsort.ini` relative to the .exe location (`shared/bin/catsort.exe` -> `shared/conf/catsort.ini`).
 2. Scans the target directory for files (non-recursive).
 3. For each file, matches its extension against every category.
 4. Creates the category subfolder if it doesn't exist.
@@ -189,7 +189,7 @@ Each `[Category]` section has an `ext=` line with comma-separated extensions. Ad
 
 ### Design decisions
 
-- **Copy then delete (not move):** Moving preserves the file but doesn't verify the destination is readable. Copy→verify→delete ensures the file landed intact before removing the source.
+- **Copy then delete (not move):** Moving preserves the file but doesn't verify the destination is readable. Copy-verify-delete ensures the file landed intact before removing the source.
 - **SHA256 verification:** Catches silent corruption from disk errors or copy failures. The hash is computed on both sides and compared byte-by-byte.
 - **Non-recursive by design:** Sorting is typically a one-time cleanup for a flat download folder. Recursive sorting would also move files within already-sorted subfolders, creating confusion.
 
@@ -200,13 +200,49 @@ Each `[Category]` section has an `ext=` line with comma-separated extensions. Ad
 
 ---
 
+## reindex
+
+Reindexes all files in a directory to sequential numbers (1.jpg, 2.png, 3.pdf, etc.) while preserving extensions. Handles collisions by renaming through temp GUIDs — safe to run on directories with existing numbered files.
+
+```
+reindex [directory] [--dry-run]
+```
+
+| Arg | Default | Description |
+|---|---|---|
+| `directory` | current dir | Directory whose files to rename |
+| `--dry-run` / `-n` | off | Preview only — no actual renames |
+
+Padding adjusts automatically: 1-9 files -> `01.ext`, 10-99 -> `001.ext`, etc.
+
+No config file.
+
+### How it works
+
+1. Scans the directory for files (non-recursive), sorted alphabetically.
+2. Renames each file to a random GUID temp name (avoids collisions with final names).
+3. Renames each temp file to the sequential name.
+4. If any step fails, temp files are cleaned up and originals are preserved.
+
+### Design decisions
+
+- **Two-phase rename (not rename-in-place):** If file `3.jpg` already exists and we want to rename `zzz.jpg` to `3.jpg`, a direct rename would overwrite. The two-phase approach (original -> guid -> final) avoids all collisions.
+- **Alphabetical order:** Provides a deterministic, reproducible sequence. Sorting by date or size would make the order depend on filesystem metadata.
+
+### Known limitations
+
+- No recursion — only files in the specified directory.
+- Order is alphabetical by filename — not by date or any other property.
+
+---
+
 ## PATH setup
 
 ```
 setx PATH "%PATH%;D:\DevEnv\custom_utils\shared\bin"
 ```
 
-One entry covers `delcache`, `dirdiff`, `catsort`, and any future CLI tools added to `shared/bin/`. Restart your terminal after setting.
+One entry covers delcache, dirdiff, catsort, reindex, and any future CLI tools added to `shared/bin/`. Restart your terminal after setting.
 
 ---
 
@@ -216,7 +252,7 @@ One entry covers `delcache`, `dirdiff`, `catsort`, and any future CLI tools adde
 build.bat
 ```
 
-Uses Windows' built-in C# compiler (`csc.exe`). No Visual Studio, no NuGet, no `dotnet` CLI, no install step.
+Uses Windows' built-in C# compiler (`csc.exe`). No Visual Studio, no NuGet, no dotnet CLI, no install step.
 
 ### Prerequisites
 
@@ -231,11 +267,13 @@ shared/
 ├── src/
 │   ├── dirdiff.cs           ← source (edit this)
 │   ├── delcache.cs          ← source (edit this)
-│   └── catsort.cs           ← source (edit this)
+│   ├── catsort.cs           ← source (edit this)
+│   └── reindex.cs           ← source (edit this)
 ├── bin/
 │   ├── dirdiff.exe           ← compiled binary (build output)
 │   ├── delcache.exe          ← compiled binary (build output)
-│   └── catsort.exe           ← compiled binary (build output)
+│   ├── catsort.exe           ← compiled binary (build output)
+│   └── reindex.exe           ← compiled binary (build output)
 ├── conf/
 │   ├── cacheDirs.ini        ← delcache configuration
 │   └── catsort.ini          ← catsort configuration
@@ -245,11 +283,10 @@ shared/
 
 ### Adding a new tool
 
-1. Write your `.cs` file in `src/`.
-2. Add a compile line to `build.bat` (same pattern as the existing two).
+1. Write your .cs file in `src/`.
+2. Add a compile line to `build.bat` (same pattern as the existing tools).
 3. If the tool needs a config file, add it to `conf/` and reference it from code as `../conf/<filename>`.
-4. If the tool needs to be on PATH, run `build.bat` — the `.exe` lands in `bin/` automatically.
-5. Run `build.bat` — the `.exe` lands in `bin/` automatically.
+4. Run `build.bat` — the .exe lands in `bin/` automatically.
 
 ### 32-bit systems
 
@@ -259,9 +296,9 @@ For 32-bit Windows, edit `build.bat` to use `C:\Windows\Microsoft.NET\Framework\
 
 ## Compatibility
 
-| Aspect | delcache | dirdiff | catsort |
-|---|---|---|---|---|
-| OS | Windows 7+ | Same | Same |
-| .NET version | Compiled against .NET Framework 4.0 | Same | Same |
-| Dependencies | None | `System.Windows.Forms.dll` | None |
-| Architecture | x64 (recompile for x86) | Same | Same |
+| Aspect | delcache | dirdiff | catsort | reindex |
+|---|---|---|---|---|---|---|
+| OS | Windows 7+ | Same | Same | Same |
+| .NET version | Compiled against .NET Framework 4.0 | Same | Same | Same |
+| Dependencies | None | `System.Windows.Forms.dll` | None | None |
+| Architecture | x64 (recompile for x86) | Same | Same | Same |

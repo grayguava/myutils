@@ -1,28 +1,28 @@
-Personal collection of utility tools I've built for daily use on Windows. Covers file management, backups, metadata stripping, desktop customization, and system monitoring.
+Personal collection of utility tools built for daily use on Windows. Covers file management, backups, metadata stripping, desktop customization, and system monitoring.
 
 ## Tools
 
 | Tool | Lang | Portable | Description |
-|---|---|---|---|
-| `wallswitch/` | C# | Yes — standalone `.exe` | On-demand wallpaper randomizer with a shuffle queue (no repeats until all images are shown). Compiled with `csc.exe` — no runtime install needed. |
-| `kdbx-backup/` | C# | Yes — two standalone `.exe` files | Backup pipeline for KeePass `.kdbx` files. An always-on watcher daemon snapshots databases on file change; a scheduler-triggered tool pushes snapshots to cloud remotes via rclone. |
-| `shared/` | C# | Yes — all `.exe` files in `shared/bin/` | Unified directory for portable CLI tools. Contains `delcache` (find/delete cache dirs), `dirdiff` (directory comparison), and `catsort` (sort files into category folders by extension). Config in `conf/`, sources in `src/`. Add **one** PATH entry (`shared/bin/`) for all tools. See [`shared/README.md`](shared/README.md). |
-| `etsu/` | PowerShell | No — requires PowerShell | Two interactive exiftool frontends (`etsu` = ExifTool Simple Use). `read.ps1` displays metadata from a single file with dimmed values; `clean.ps1` strips EXIF/IPTC/XMP from images/videos/PDFs with `.bak` rollback, 5-stage progress, and auto-logging. Both share the same styled CLI. Requires `exiftool.exe` on PATH. |
-| `diskwatch/` | C# | Yes — standalone `.exe` | Read-only disk health monitor with change detection. Runs `fsutil`, `chkdsk`, `smartctl`, and Event Log checks; shows a popup when something changes. Config in `bin/config.ini`, state in `logs/result.json`. Silent when healthy. |
-| [`archive/`](archive/README.md) | — | — | Retired/abandoned tools kept for reference. |
+|---|---|---|---|---|
+| [wallswitch/](wallswitch/README.md) | C# | Yes | Wallpaper randomizer with shuffle queue. |
+| [kdbx-backup/](kdbx-backup/README.md) | C# | Yes | KeePass backup pipeline with watcher daemon + rclone push. |
+| shared/ | C# | Yes | Portable CLI tool collection. One PATH entry for all. See [README](shared/README.md). |
+| [etsu/](etsu/README.md) | PowerShell | No | ExifTool frontends: read metadata, strip EXIF/IPTC/XMP with rollback. |
+| [diskwatch/](diskwatch/README.md) | C# | Yes | Read-only disk health monitor with change detection and popup alerts. |
+| [archive/](archive/README.md) | — | — | Retired tools kept for reference. |
 
-**Portable** means the tool is a standalone `.exe` compiled with Windows' built-in `csc.exe` — no runtime, no install step, just copy and run. CLI tools are colocated in `shared/bin/` so a single PATH entry covers all of them.
+**Portable** means the tool is a standalone .exe compiled with Windows' built-in `csc.exe` — no runtime, no install step, just copy and run. CLI tools are colocated in `shared/bin/` so a single PATH entry covers all of them.
 
-### Why `shared/` exists instead of standalone tools?
+### Why shared/ exists instead of standalone tools?
 
-Windows `setx PATH` has a ~2048-character limit. Each standalone `bin\` entry costs ~40–60 characters, so adding multiple bin entries would hit the ceiling. By putting every CLI `.exe` in one `bin/`, only **one** PATH entry is needed. Tools that don't need PATH access (e.g. `kdbx-backup`, `wallswitch`) stay in their own directories — `shared/` is only for commands you type in a terminal.
+Windows `setx PATH` has a ~2048-character limit. Each standalone `bin\` entry costs ~40-60 characters, so adding multiple bin entries would hit the ceiling. By putting every CLI .exe in one `bin/`, only one PATH entry is needed. Tools that don't need PATH access (e.g. kdbx-backup, wallswitch) stay in their own directories — shared/ is only for commands you type in a terminal.
 
-Each tool inside `shared/` is fully independent — removing one `.exe` and its config file won't affect any other tool. The entire `shared/` folder is portable: copy it anywhere, add `bin/` to PATH, and all CLI tools work.
+Each tool inside shared/ is fully independent — removing one .exe and its config file won't affect any other tool. The entire shared/ folder is portable: copy it anywhere, add `bin/` to PATH, and all CLI tools work.
 
 ## Highlights
 
 - **AI-vibed** — all tools were written with AI assistance (opencode - various models/claude). The code is functional but not obsessively polished.
 - **Zero-dependency C# tools** — compiled with `csc.exe` (part of Windows), no NuGet, no .NET SDK needed beyond what ships with the OS.
-- **PowerShell tools** — `etsu` uses PowerShell with WinForms for the native file dialog; no modules required.
-- **Python tools** — stdlib-only where possible; `torui` (archived) depends on `rich` + `stem`.
+- **PowerShell tools** — etsu uses PowerShell with WinForms for the native file dialog; no modules required.
+- **Python tools** — stdlib-only where possible; torui (archived) depends on `rich` + `stem`.
 - **C# tools are Windows-only** — they use Win32 APIs (`SystemParametersInfo` for wallpapers, `FileSystemWatcher`, etc.). PowerShell/Python tools can be installed on any platform (core logic is cross-platform), but the Windows-native folder dialogs (PowerShell + WinForms) won't work outside Windows.

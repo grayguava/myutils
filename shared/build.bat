@@ -21,4 +21,8 @@ echo Building catsort...
 "%CSC%" /nologo /optimize+ /target:exe /out:bin\catsort.exe src\catsort.cs
 if %ERRORLEVEL% NEQ 0 exit /b 1
 
+echo Building reindex...
+"%CSC%" /nologo /optimize+ /target:exe /out:bin\reindex.exe src\reindex.cs
+if %ERRORLEVEL% NEQ 0 exit /b 1
+
 echo All builds succeeded.
