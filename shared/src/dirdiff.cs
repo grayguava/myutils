@@ -10,6 +10,7 @@ using System.Windows.Forms;
 
 class Program {
     static string HR = new string('\u2500', 50);
+    static int MaxThreads = 8;
 
     class FileEntry {
         public string AbsPath;
@@ -19,6 +20,8 @@ class Program {
     [STAThread]
     static void Main(string[] args) {
         string sourceRoot, destRoot;
+
+        LoadConfig();
 
         if (args.Length >= 2) {
             sourceRoot = args[0];
@@ -127,7 +130,7 @@ class Program {
         int nHash   = inBoth.Count;
         object lockObj = new object();
 
-        Parallel.ForEach(inBoth, new ParallelOptions { MaxDegreeOfParallelism = 8 }, (relPath) => {
+        Parallel.ForEach(inBoth, new ParallelOptions { MaxDegreeOfParallelism = MaxThreads }, (relPath) => {
             string sh = HashFile(srcMap[relPath].AbsPath);
             string dh = HashFile(dstMap[relPath].AbsPath);
             lock (lockObj) {
@@ -198,6 +201,17 @@ class Program {
             } catch { }
         }
         return map;
+    }
+
+    static void LoadConfig() {
+        string confPath = Path.Combine(
+            Path.GetDirectoryName(
+                System.Reflection.Assembly.GetExecutingAssembly().Location),
+            "..", "conf", "threadCount");
+        if (!File.Exists(confPath)) return;
+        int t;
+        if (int.TryParse(File.ReadAllText(confPath).Trim(), out t) && t > 0)
+            MaxThreads = t;
     }
 
     const int ChunkSize = 1024 * 1024;

@@ -40,7 +40,7 @@ class Program
             confPath = Path.Combine(
                 Path.GetDirectoryName(
                     System.Reflection.Assembly.GetExecutingAssembly().Location),
-                "..", "conf", "catsort.ini");
+                "..", "conf", "fileExts.ini");
 
         if (!File.Exists(confPath))
         {
@@ -124,6 +124,12 @@ class Program
 
             if (!_dryRun && !Directory.Exists(catDir))
                 Directory.CreateDirectory(catDir);
+
+            if (!_dryRun && File.Exists(destPath))
+            {
+                Console.WriteLine("  SKIP  " + fileName + "  (already exists in " + cat.Name + "/)");
+                return;
+            }
 
             if (!_dryRun)
             {

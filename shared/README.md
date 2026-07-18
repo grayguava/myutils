@@ -79,7 +79,7 @@ dirdiff [<source> <destination>]
 | `dirdiff "D:\src" "D:\dst"` | Compare the two paths directly — works on any OS |
 | `dirdiff` | Opens two Explorer-style folder pickers (Windows only) |
 
-No config file.
+Config file: `conf/threadCount` — contains a single number (default 8) for parallel hash threads.
 
 ### How it works
 
@@ -156,7 +156,7 @@ catsort [directory] [--dry-run]
 
 ### Configuration
 
-**Location:** `conf/catsort.ini`
+**Location:** `conf/fileExts.ini`
 
 ```ini
 [Images]
@@ -179,7 +179,7 @@ Each [Category] section has an `ext=` line with comma-separated extensions. Add 
 
 ### How it works
 
-1. Reads `conf/catsort.ini` relative to the .exe location (`shared/bin/catsort.exe` -> `shared/conf/catsort.ini`).
+1. Reads `conf/fileExts.ini` relative to the .exe location (`shared/bin/catsort.exe` -> `shared/conf/fileExts.ini`).
 2. Scans the target directory for files (non-recursive).
 3. For each file, matches its extension against every category.
 4. Creates the category subfolder if it doesn't exist.
@@ -196,7 +196,7 @@ Each [Category] section has an `ext=` line with comma-separated extensions. Add 
 ### Known limitations
 
 - No recursion — subdirectories are not scanned.
-- Overwrite prevention — if a file with the same name already exists in the target category folder, the copy fails and the original is left in place.
+- Overwrite prevention — if a file with the same name already exists in the target category folder, it's skipped with a notice (original left in place).
 
 ---
 
@@ -275,8 +275,9 @@ shared/
 │   ├── catsort.exe           ← compiled binary (build output)
 │   └── reindex.exe           ← compiled binary (build output)
 ├── conf/
-│   ├── cacheDirs.ini        ← delcache configuration
-│   └── catsort.ini          ← catsort configuration
+│   ├── threadCount           ← dirdiff parallel hash threads (default 8)
+│   ├── cacheDirs.ini         ← delcache configuration
+│   └── fileExts.ini          ← catsort configuration
 ├── build.bat
 └── README.md
 ```
