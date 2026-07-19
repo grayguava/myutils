@@ -121,7 +121,7 @@ Only these IDs are tracked across runs and flagged on change. Lines starting wit
 
 ### result.json
 
-Pretty-printed JSON stored in `logs/result.json` after every run. Contains parsed state for all drives, SMART devices, and the most recent repair timestamp. Loaded via `JavaScriptSerializer` for deserialization; written with a custom pretty-printer.
+Pretty-printed JSON stored in `logs/<timestamp>/result.json` after every run. Contains parsed state for all drives, SMART devices, and the most recent repair timestamp. The previous run's `result.json` is loaded as the comparison baseline — no root-level `logs/result.json` duplicate. Loaded via `JavaScriptSerializer` for deserialization; written with a custom pretty-printer.
 
 Structure:
 
@@ -156,7 +156,7 @@ Structure:
 
 ### Diff comparison
 
-On every run, the current state is compared against the previous state from `result.json`. The following differences trigger a change:
+On every run, the current state is compared against the previous state loaded from the newest timestamped run directory's `result.json`. The following differences trigger a change:
 
 - **Dirty bit** toggled.
 - **Filesystem status** changed (clean / issues / unknown).
@@ -166,20 +166,21 @@ On every run, the current state is compared against the previous state from `res
 - **Any watched SMART attribute raw value** changed.
 - **Repair event timestamp** changed.
 
-If no previous state exists (first run or deleted result.json), no changes are reported.
+If no previous state exists (first run), no changes are reported.
 
 ### Raw output logging
 
-Every run saves the raw command output to `logs/<timestamp>/` directory:
+Every run saves the raw command output to `logs/<timestamp>/runs/` directory:
 
 ```
 logs/
-├── result.json
 ├── 2026-07-17T14-30-00/
-│   ├── fsutil_C.json
-│   ├── chkdsk_C.json
-│   ├── smartctl_sda.json
-│   └── wininit.json
+│   ├── result.json
+│   └── runs/
+│       ├── fsutil_C.json
+│       ├── chkdsk_C.json
+│       ├── smartctl_sda.json
+│       └── wininit.json
 └── 2026-07-10T09-15-00/
     └── ...
 ```
@@ -200,12 +201,14 @@ Only the 5 most recent timestamped run directories are kept. Older runs are prun
 
 ## Popup
 
-At the end of every normal run (and via `--remind`), a `MessageBox` shows:
-- Run date.
-- Per-drive filesystem status.
-- SMART health and endurance percentage.
+At the end of every normal run (and via `--remind`), a `MessageBox` shows a summary with an OK button. Two tiers:
 
-The popup is informational only — click OK to dismiss.
+| Condition | Icon | Title text |
+|---|---|---|
+| No changes | Information (i) | "Today's run is successful. No issues found." |
+| Changes detected | Warning (!) | "Today's run is successful. Some values have changed since the last run." |
+
+Both tiers show the same data: run date, per-drive filesystem status, bad sectors, dirty bit, SMART health, and endurance percentage.
 
 ---
 
@@ -233,12 +236,12 @@ diskwatch/
 │   ├── program.cs           ← Main(), --remind, runs commands, Event Log reader, popup
 │   ├── commandrunner.cs     ← Process launcher (no timeout)
 │   ├── parser.cs            ← State model, parsing, diff, pretty JSON
-│   └── remind.cs            ← MessageBox popup with summary
+│   └── popup.cs            ← MessageBox popup with summary
 ├── bin/
 │   ├── diskwatch.exe         ← compiled binary (build output)
 │   ├── commands.ini          ← commands to run (edit this)
 │   └── smartAttributes.ini   ← SMART attr IDs to track (edit this)
-├── logs/                     ← auto-created, holds result.json + raw output dirs
+├── logs/                     ← auto-created, holds per-run dirs with result.json + runs/
 ├── build.bat
 └── README.md
 ```

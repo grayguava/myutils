@@ -25,6 +25,7 @@ class Program
         string baseDir = BaseDir();
         string logsDir = Path.GetFullPath(Path.Combine(baseDir, "..", "logs"));
         string runDir = Path.Combine(logsDir, DateTime.Now.ToString("yyyy-MM-ddTHH-mm-ss"));
+        string runsDir = Path.Combine(runDir, "runs");
 
         var commands = LoadCommands(Path.Combine(baseDir, "commands.ini"));
         var smartAttrs = LoadSmartAttrs(Path.Combine(baseDir, "smartAttributes.ini"));
@@ -33,16 +34,15 @@ class Program
         {
             string output;
             int code = CommandRunner.Run(cmd.Exe, cmd.Args, out output);
-            SaveRaw(runDir, cmd.Name, code, output);
+            SaveRaw(runsDir, cmd.Name, code, output);
         }
 
         string evtLog = ReadWininitLog();
-        SaveRaw(runDir, "wininit", 0, evtLog ?? "");
+        SaveRaw(runsDir, "wininit", 0, evtLog ?? "");
 
-        string resultPath = Path.Combine(logsDir, "result.json");
-        var prev = MasterStateManager.Load(resultPath);
-        var curr = MasterStateManager.Build(runDir, smartAttrs);
-        MasterStateManager.Save(resultPath, curr);
+        var prev = LoadPrevState(logsDir, runDir);
+        var curr = MasterStateManager.Build(runsDir, smartAttrs);
+        MasterStateManager.Save(Path.Combine(runDir, "result.json"), curr);
 
         var dirs = new List<string>(Directory.GetDirectories(logsDir));
         dirs.Sort();
@@ -74,13 +74,13 @@ class Program
             foreach (string c in changes)
                 Console.WriteLine("    " + c);
             Console.WriteLine();
-            Remind.Show();
+            Remind.Show(true);
             return 1;
         }
 
         Console.WriteLine();
         Console.WriteLine("  No changes since last run.");
-        Remind.Show();
+        Remind.Show(false);
         return 0;
     }
 
@@ -148,9 +148,6 @@ class Program
         {
             if (c == '"') sb.Append("\\\"");
             else if (c == '\\') sb.Append("\\\\");
-            else if (c == '\r') sb.Append("\\r");
-            else if (c == '\n') sb.Append("\\n");
-            else if (c == '\t') sb.Append("\\t");
             else sb.Append(c);
         }
         sb.Append('"');
@@ -198,5 +195,17 @@ class Program
             catch { continue; }
         }
         return "";
+    }
+
+    static MasterState LoadPrevState(string logsDir, string currentDir)
+    {
+        var dirs = new List<string>(Directory.GetDirectories(logsDir));
+        dirs.Sort();
+        for (int i = dirs.Count - 1; i >= 0; i--)
+        {
+            if (dirs[i] != currentDir)
+                return MasterStateManager.Load(Path.Combine(dirs[i], "result.json"));
+        }
+        return null;
     }
 }

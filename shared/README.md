@@ -160,20 +160,31 @@ catsort [directory] [--dry-run]
 
 ```ini
 [Images]
-ext=.jpg,.jpeg,.png,.gif,.bmp,.webp,.svg,.ico
+ext=.jpg,.jpeg,.png,.gif,.bmp,.webp,.svg,.ico,.avif,.heic
 
 [Videos]
-ext=.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm
+ext=.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.mpg,.mpeg
 
 [Documents]
-ext=.pdf,.doc,.docx,.txt,.md,.csv,.json,.xml,.js,.ts,.html,.css,.py,.cs,.rs,.yaml,.yml,.ini,.cfg,.log,.sql,.bat,.ps1,.sh
+ext=.pdf,.doc,.docx,.txt,.md,.rtf,.odt,.odp,.epub,.tex
 
-[Archives]
-ext=.zip,.rar,.7z,.tar,.gz,.bz2,.xz
+[Code]
+ext=.cs,.rs,.py,.js,.ts,.java,.cpp,.c,.go,.rb,.php,.swift,.kt,.lua,.pl,.zig
 
-[Audio]
-ext=.mp3,.wav,.flac,.aac,.ogg,.wma,.m4a
+[Web]
+ext=.html,.htm,.css,.scss,.less,.jsx,.tsx,.vue,.svelte,.astro
+
+[Config]
+ext=.json,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.gitignore
+
+[Scripts]
+ext=.bat,.cmd,.ps1,.psm1,.sh,.bash,.zsh,.vbs
+
+[Data]
+ext=.csv,.tsv,.sql,.db,.sqlite,.jsonl,.parquet
 ```
+
+Full list in [`conf/fileExts.ini`](./conf/fileExts.ini) — edit freely, no recompilation needed.
 
 Each [Category] section has an `ext=` line with comma-separated extensions. Add or remove categories freely — no recompilation needed.
 
@@ -298,8 +309,8 @@ For 32-bit Windows, edit `build.bat` to use `C:\Windows\Microsoft.NET\Framework\
 ## Compatibility
 
 | Aspect | delcache | dirdiff | catsort | reindex |
-|---|---|---|---|---|---|---|
-| OS | Windows 7+ | Same | Same | Same |
-| .NET version | Compiled against .NET Framework 4.0 | Same | Same | Same |
+|---|---|---|---|---|---|
+| OS | Windows 7+ | Windows 7+ | Windows 7+ | Windows 7+ |
+| .NET version | .NET Framework 4.0 | .NET Framework 4.0 | .NET Framework 4.0 | .NET Framework 4.0 |
 | Dependencies | None | `System.Windows.Forms.dll` | None | None |
-| Architecture | x64 (recompile for x86) | Same | Same | Same |
+| Architecture | x64 | x64 | x64 | x64 |
