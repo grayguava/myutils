@@ -1,0 +1,5 @@
+# Filenames to skip during reindex (one per line, case-insensitive)
+desktop.ini
+thumbs.db
+.ds_store
+folder.jpg
