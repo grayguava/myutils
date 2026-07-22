@@ -1,4 +1,6 @@
-Personal collection of utility tools built for daily use on Windows. Covers file management, backups, metadata stripping, desktop customization, and system monitoring.
+# winkit
+
+A collection of small Windows utilities, each built to solve one specific recurring problem — file management, backups, metadata handling, desktop customization, and system monitoring. Designed with safety in mind: destructive operations verify before they commit.
 
 ## Tools
 
@@ -6,23 +8,22 @@ Personal collection of utility tools built for daily use on Windows. Covers file
 |---|---|---|---|
 | [wallswitch/](wallswitch/README.md) | C# | Yes | Wallpaper randomizer with shuffle queue. |
 | [kdbx-backup/](kdbx-backup/README.md) | C# | Yes | KeePass backup pipeline with watcher daemon + rclone push. |
-| shared/ | C# | Yes | Portable CLI tool collection. One PATH entry for all. See [README](shared/README.md). |
-| [etsu/](etsu/README.md) | PowerShell | No | ExifTool frontends: read metadata, strip EXIF/IPTC/XMP with rollback. |
+| shared/ | C# | Yes | Portable CLI tool collection (delcache, dirdiff, catsort, reindex). One PATH entry for all. See [README](shared/README.md). |
+| [etsu/](etsu/README.md) | PowerShell | No | simple ExifTool frontends: read metadata, strip EXIF/IPTC/XMP |
 | [diskwatch/](diskwatch/README.md) | C# | Yes | Read-only disk health monitor with change detection and popup alerts. |
-| [archive/](archive/README.md) | — | — | Retired tools kept for reference. |
+| [archive/](archive/README.md) | — | — | Retired tools, kept for reference only. |
 
-**Portable** means the tool is a standalone .exe compiled with Windows' built-in `csc.exe` — no runtime, no install step, just copy and run. CLI tools are colocated in `shared/bin/` so a single PATH entry covers all of them.
 
-### Why shared/ exists instead of standalone tools?
+**Portable** means the tool is a standalone `.exe` compiled with Windows' built-in `csc.exe` — no runtime, no install step, just copy and run. CLI tools are colocated in `shared/bin/` so a single PATH entry covers all of them.
 
-Windows `setx PATH` has a ~2048-character limit. Each standalone `bin\` entry costs ~40-60 characters, so adding multiple bin entries would hit the ceiling. By putting every CLI .exe in one `bin/`, only one PATH entry is needed. Tools that don't need PATH access (e.g. kdbx-backup, wallswitch) stay in their own directories — shared/ is only for commands you type in a terminal.
+### Why shared/ exists instead of standalone tools
 
-Each tool inside shared/ is fully independent — removing one .exe and its config file won't affect any other tool. The entire shared/ folder is portable: copy it anywhere, add `bin/` to PATH, and all CLI tools work.
+Windows' `setx PATH` has a ~2048-character limit. Adding a separate PATH entry per tool would eventually hit that ceiling. Putting every CLI `.exe` in one `bin/` means the whole collection only costs a single PATH entry — while each tool inside stays fully independent (removing one `.exe` and its config file doesn't affect any other).
 
 ## Highlights
 
-- **AI-vibed** — all tools were written with AI assistance (opencode - various models/claude). The code is functional but not obsessively polished.
-- **Zero-dependency C# tools** — compiled with `csc.exe` (part of Windows), no NuGet, no .NET SDK needed beyond what ships with the OS.
-- **PowerShell tools** — etsu uses PowerShell with WinForms for the native file dialog; no modules required.
-- **Python tools** — stdlib-only where possible; torui (archived) depends on `rich` + `stem`.
-- **C# tools are Windows-only** — they use Win32 APIs (`SystemParametersInfo` for wallpapers, `FileSystemWatcher`, etc.). PowerShell/Python tools can be installed on any platform (core logic is cross-platform), but the Windows-native folder dialogs (PowerShell + WinForms) won't work outside Windows.
+- **Built with AI-assisted development** — I direct the design and logic (safety checks, edge cases, config-driven behavior), and use AI tools to help with implementation.
+- **Zero-dependency C# tools** — compiled with `csc.exe` (built into Windows), no NuGet, no .NET SDK beyond what ships with the OS.
+- **Safety-first design** — destructive tools verify before committing (copy → hash-check → delete) and support `--dry-run` where relevant. `reindex` includes rollback logs for its last 25 runs.
+- **PowerShell tools** — `etsu` uses PowerShell with WinForms for the native file dialog; no modules required.
+- **C# tools are Windows-only** — they use Win32 APIs (`SystemParametersInfo`, `FileSystemWatcher`, etc.). PowerShell/Python tools are portable in logic, but native folder dialogs won't work outside Windows.
