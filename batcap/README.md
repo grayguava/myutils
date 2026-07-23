@@ -20,7 +20,7 @@ Appends one line to `logs/batcap.log`:
 
 | Field | Source | Unit |
 |---|---|---|
-| Design | `bin/.conf` (44494 default) | mWh |
+| Design | `bin/.conf` (44021 default) | mWh |
 | Full | BatteryFullChargedCapacity WMI | mWh |
 | Remaining | BatteryStatus WMI | mWh |
 | Voltage | BatteryStatus WMI | mV |
