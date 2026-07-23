@@ -18,7 +18,7 @@ The tool:
 4. Pops the front of the queue, sets it as wallpaper, appends it to the shown list.
 5. Saves state back to `bin/state`.
 
-There is no UI and no output. The tool is silent on success — failure is also silent (returns without action if `assets/` is missing or empty). Configuration is via `bin/config.ini` (`AssetsDir` key, default `assets`).
+There is no UI and no output. The tool is silent on success — failure is also silent (returns without action if `assets/` is missing or empty). Configuration is via `bin/.conf` (`AssetsDir` key, default `assets`).
 
 ---
 
@@ -47,10 +47,10 @@ wallswitch/
 │   └── wallswitch.cs     ← source (edit this)
 ├── bin/
 │   ├── wallswitch.exe    ← compiled binary (build output)
-│   ├── config.ini        ← configuration (AssetsDir)
+│   ├── .conf             ← configuration (AssetsDir)
 │   └── state             ← shuffle queue / shown list (auto-managed)
 ├── build.bat
-└── assets/                ← your image collection
+└── assets/               ← your image collection
 ```
 
 ---
@@ -152,7 +152,7 @@ The hotkey itself is up to you — `wallswitch.exe` just picks the next image fr
 
 ## Configuration
 
-Settings are read from `bin/config.ini`. Keys are case-insensitive; lines starting with `#` are comments.
+Settings are read from `bin/.conf`. Keys are case-insensitive; lines starting with `#` are comments.
 
 | Key | Required | Default | Description |
 |---|---|---|---|

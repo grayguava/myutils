@@ -76,9 +76,9 @@ Scans up to 50 recent entries across three logs (Wininit/Operational, System, Ap
 
 ## Configuration
 
-### commands.ini
+### .cmds
 
-`bin/commands.ini` lists every command to run, grouped by section. Each section is a command category; each line under it is a full command:
+`bin/.cmds` lists every command to run, grouped by section. Each section is a command category; each line under it is a full command:
 
 ```ini
 [fsutil]
@@ -101,9 +101,9 @@ The first word of each line is the executable, the rest are its arguments. Secti
 
 The Event Log reader is built-in (uses .NET EventLog API, not an external command).
 
-### smartAttributes.ini
+### .smart
 
-`bin/smartAttributes.ini` lists SMART attribute IDs to track, one per line:
+`bin/.smart` lists SMART attribute IDs to track, one per line:
 
 ```ini
 5
@@ -236,12 +236,12 @@ diskwatch/
 │   ├── program.cs           ← Main(), --remind, runs commands, Event Log reader, popup
 │   ├── commandrunner.cs     ← Process launcher (no timeout)
 │   ├── parser.cs            ← State model, parsing, diff, pretty JSON
-│   └── popup.cs            ← MessageBox popup with summary
+│   └── popup.cs             ← MessageBox popup with summary
 ├── bin/
-│   ├── diskwatch.exe         ← compiled binary (build output)
-│   ├── commands.ini          ← commands to run (edit this)
-│   └── smartAttributes.ini   ← SMART attr IDs to track (edit this)
-├── logs/                     ← auto-created, holds per-run dirs with result.json + runs/
+│   ├── diskwatch.exe        ← compiled binary (build output)
+│   ├── .cmds                ← commands to run (edit this)
+│   └── .smart               ← SMART attr IDs to track (edit this)
+├── logs/                    ← auto-created, holds per-run dirs with result.json + runs/
 ├── build.bat
 └── README.md
 ```
@@ -290,9 +290,9 @@ Disk health checks are IO-intensive (fsutil, chkdsk, smartctl all read from disk
 - **Admin required** — run as Administrator. Without elevation, fsutil reports "Access Denied", chkdsk
   cannot scan, and smartctl may show limited data.
 - **Windows-only** — uses fsutil, chkdsk, and Windows Event Log.
-- **smartctl optional but manual** — must be installed and configured in commands.ini if you want SMART
+- **smartctl optional but manual** — must be installed and configured in .cmds if you want SMART
   checks. Not bundled.
-- **No drive discovery** — configure every drive in commands.ini and SMART attrs in smartAttributes.ini.
+- **No drive discovery** — configure every drive in .cmds and SMART attrs in .smart.
 - **No daemon mode** — use Task Scheduler for periodic runs.
 - **Event log filtering is heuristic** — the wininit/repair event detection is based on keyword
   matching and may miss or falsely flag events depending on Windows version and language.

@@ -27,8 +27,8 @@ class Program
         string runDir = Path.Combine(logsDir, DateTime.Now.ToString("yyyy-MM-ddTHH-mm-ss"));
         string runsDir = Path.Combine(runDir, "runs");
 
-        var commands = LoadCommands(Path.Combine(baseDir, "commands.ini"));
-        var smartAttrs = LoadSmartAttrs(Path.Combine(baseDir, "smartAttributes.ini"));
+        var commands = LoadCommands(Path.Combine(baseDir, ".cmds"));
+        var smartAttrs = LoadSmartAttrs(Path.Combine(baseDir, ".smart"));
 
         foreach (var cmd in commands)
         {

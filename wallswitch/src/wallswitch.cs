@@ -71,7 +71,7 @@ class Program {
     }
 
     static string ResolveAssetsDir() {
-        string path = Path.Combine(exeDir, "config.ini");
+        string path = Path.Combine(exeDir, ".conf");
         if (!File.Exists(path)) return Path.Combine(exeDir, "assets");
         try {
             foreach (string raw in File.ReadAllLines(path)) {

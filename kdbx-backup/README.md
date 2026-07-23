@@ -56,12 +56,12 @@ Both use `/target:winexe` — no console window at any point. The process appear
 kdbx-backup/
 ├── build.bat                    ← builds both tools
 ├── src/
-│   ├── watcher.cs              ← source (edit this)
-│   └── push.cs                 ← source (edit this)
+│   ├── watcher.cs               ← source (edit this)
+│   └── push.cs                  ← source (edit this)
 ├── bin/
-│   ├── kdbxWatch.exe           ← compiled binary
-│   ├── kdbxPushToRemote.exe    ← compiled binary
-│   └── config.ini              ← central config (shared by both)
+│   ├── kdbxWatch.exe            ← compiled binary
+│   ├── kdbxPushToRemote.exe     ← compiled binary
+│   └──  .conf                   ← central config (shared by both)
 ├── databaseCopies/              ← local snapshot destination (auto-created)
 ├── logs/                        ← shared log folder (auto-created)
 └── README.md

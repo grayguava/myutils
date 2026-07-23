@@ -37,14 +37,14 @@ namespace kdbxPushToRemote
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
-            LoadConfig(Path.Combine(baseDir, "config.ini"), baseDir);
+            LoadConfig(Path.Combine(baseDir, ".conf"), baseDir);
             Directory.CreateDirectory(Path.GetDirectoryName(LogFile) ?? baseDir);
 
             Log("--- Sync started ---");
 
             if (Remotes.Count == 0)
             {
-                Log("No remotes configured. Check Remotes= in config.ini.");
+                Log("No remotes configured. Check Remotes= in .conf.");
                 return;
             }
 

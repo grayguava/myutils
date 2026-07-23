@@ -58,7 +58,7 @@ namespace kdbxWatch
 
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
-            LoadConfig(Path.Combine(baseDir, "config.ini"), baseDir);
+            LoadConfig(Path.Combine(baseDir, ".conf"), baseDir);
             Directory.CreateDirectory(Path.GetDirectoryName(LogFile) ?? baseDir);
             Directory.CreateDirectory(DestDir);
 

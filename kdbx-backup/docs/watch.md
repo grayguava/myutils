@@ -10,7 +10,7 @@ changes, creates local timestamped snapshots in `databaseCopies\`.
 
 ## Configuration reference
 
-File: `bin\config.ini`
+File: `bin\.conf`
 
 | Key | Required | Default | Description |
 |---|---|---|---|
@@ -29,7 +29,7 @@ File: `bin\config.ini`
 
 1. Acquire named mutex `Global\kdbxWatchSingleInstance`. If already
    held → exit immediately, silently (another instance is running).
-2. Load `config.ini` from the `.exe`'s own directory.
+2. Load `.conf` from the `.exe`'s own directory.
 3. Create `DestDir` and `LogFile` parent directories if missing.
 4. Log `Started. Watching: <SourceDir>`.
 5. Call `TakeBaselineSnapshot()`.
@@ -176,7 +176,7 @@ launches; the Task Scheduler setting handles automated re-triggers.
 
 ## Path resolution
 
-All relative paths in `config.ini` resolve against
+All relative paths in `.conf` resolve against
 `AppDomain.CurrentDomain.BaseDirectory` — the directory containing the
 `.exe` file, not the process's current working directory.
 
@@ -197,7 +197,7 @@ Tested 2026-06-29 / 2026-07-02:
 - ✅ Real edit in KeePassXC → debounce → snapshot of all files.
 - ✅ Two separate real edits → two separate snapshots.
 - ✅ No-op open/close in KeePassXC → no filesystem write, no log entry.
-- ✅ Source path with spaces and `&` works unquoted in `config.ini`.
+- ✅ Source path with spaces and `&` works unquoted in `.conf`.
 - ✅ Double-clicking `.exe` while already running → second instance exits
   silently, first instance unaffected.
 - ✅ `MaxSnapshots` pruning — oldest folders deleted after limit exceeded.

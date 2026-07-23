@@ -11,7 +11,7 @@ exits when done.
 
 ## Configuration reference
 
-File: `bin\config.ini`
+File: `bin\.conf`
 
 | Key | Required | Default | Description |
 |---|---|---|---|
@@ -121,19 +121,19 @@ the "If task is already running → Do not start a new instance" setting.
 - **Start in:** `D:\Tools\kdbx-backup\bin\`
 - **Settings → If task is already running:** Do not start a new instance
 
-The "Start in" field matters: without it, relative paths in `config.ini`
+The "Start in" field matters: without it, relative paths in `.conf`
 (`PushSourceDir=..\databaseCopies`, `PushLogFile=..\logs\rclone.log`) would
 resolve against Task Scheduler's own working directory rather than the
 `.exe`'s folder. Setting "Start in" ensures they resolve correctly.
 
-Alternatively, use absolute paths in `config.ini` to make this
+Alternatively, use absolute paths in `.conf` to make this
 Task Scheduler dependency disappear entirely.
 
 ---
 
 ## Path resolution
 
-Same pattern as `kdbxWatch`: relative paths in `config.ini` are resolved
+Same pattern as `kdbxWatch`: relative paths in `.conf` are resolved
 via `Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relPath))`.
 
 `AppDomain.CurrentDomain.BaseDirectory` = the folder containing
@@ -166,7 +166,7 @@ error message in `[stderr]` followed by `FAILED (exit 1)`.
 
 ## Adding or removing a remote
 
-Edit `Remotes=` in `config.ini`. No recompile needed. Example — add a
+Edit `Remotes=` in `.conf`. No recompile needed. Example — add a
 fourth remote:
 
 ```ini
